@@ -1,2 +1,9 @@
 node_modules/
 dist/
+
+# 后端构建产物与 IDE 文件
+backend/target/
+*.log
+.idea/
+*.iml
+.vscode/
