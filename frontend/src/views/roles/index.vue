@@ -61,7 +61,7 @@
         </el-form-item>
         <el-form-item label="权限">
           <el-checkbox-group v-model="roleForm.permissions">
-            <el-checkbox v-for="perm in permissionOptions" :key="perm.value" :label="perm.value">
+            <el-checkbox v-for="perm in permissionOptions" :key="perm.value" :value="perm.value">
               {{ perm.label }}
             </el-checkbox>
           </el-checkbox-group>

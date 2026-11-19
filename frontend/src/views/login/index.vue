@@ -13,6 +13,7 @@
             placeholder="请输入用户名"
             prefix-icon="el-icon-user"
             size="large"
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
         <el-form-item prop="password">
@@ -23,8 +24,10 @@
             prefix-icon="el-icon-lock"
             size="large"
             show-password
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
+        <!-- 让回车也触发登录事件 -->
         <el-form-item>
           <el-button 
             type="primary" 
@@ -73,6 +76,8 @@ const rules = {
 }
 
 async function handleLogin() {
+  // 回车可能被连续触发，登录中直接忽略，避免重复提交
+  if (loading.value) return
   // validate() 校验失败会 reject，用 catch 兜住，避免控制台出现未捕获异常
   const valid = await loginFormRef.value.validate().catch(() => false)
   if (!valid) return
