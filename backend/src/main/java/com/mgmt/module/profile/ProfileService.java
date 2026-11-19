@@ -5,12 +5,11 @@ import com.mgmt.common.UserContext;
 import com.mgmt.module.profile.dto.ChangePasswordRequest;
 import com.mgmt.module.profile.dto.ProfileVO;
 import com.mgmt.module.profile.dto.UpdateProfileRequest;
+import com.mgmt.module.auth.AuthService;
 import com.mgmt.module.user.entity.SysUser;
 import com.mgmt.module.user.mapper.SysUserMapper;
-import com.mgmt.security.AuthInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -32,7 +30,7 @@ public class ProfileService {
 
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-    private final StringRedisTemplate redisTemplate;
+    private final AuthService authService;
 
     @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
@@ -66,7 +64,7 @@ public class ProfileService {
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userMapper.updateById(user);
-        invalidateSessions(user.getId());
+        authService.invalidateAllSessions(user.getId());
     }
 
     @Transactional
@@ -116,15 +114,6 @@ public class ProfileService {
         } catch (IOException ignored) {
             // 旧文件删不掉不影响新头像生效，最多留下一个孤儿文件
         }
-    }
-
-    private void invalidateSessions(Long userId) {
-        String sessionKey = AuthInterceptor.USER_TOKENS_KEY_PREFIX + userId;
-        Set<String> tokens = redisTemplate.opsForSet().members(sessionKey);
-        if (tokens != null) {
-            tokens.forEach(token -> redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token));
-        }
-        redisTemplate.delete(sessionKey);
     }
 
     /**

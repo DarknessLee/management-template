@@ -13,7 +13,7 @@
         <el-input 
           v-model="searchKeyword" 
           placeholder="请输入用户名、姓名或邮箱"
-          prefix-icon="el-icon-search"
+          :prefix-icon="icons.Search"
           clearable
           @keyup.enter="loadUsers"
         />
@@ -44,9 +44,18 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" />
-        <el-table-column v-if="canOperate" label="操作" width="200">
+        <el-table-column v-if="canOperate" label="操作" width="300">
           <template #default="scope">
             <el-button v-permission="'users:edit'" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+            <el-button
+              v-if="scope.row.id !== userStore.userInfo?.id"
+              v-permission="'users:edit'"
+              size="small"
+              type="warning"
+              @click="kickoutUser(scope.row)"
+            >
+              强制下线
+            </el-button>
             <el-button v-permission="'users:delete'" size="small" type="danger" @click="deleteUser(scope.row)">删除</el-button>
           </template>
         </el-table-column>
@@ -112,12 +121,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import { getUsersApi, createUserApi, updateUserApi, deleteUserApi } from '@/api/user'
+import { Plus, Search } from '@element-plus/icons-vue'
+import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
 import { useUserStore } from '@/stores/user'
 
-const icons = { Plus }
+const icons = { Plus, Search }
 
 const userStore = useUserStore()
 // 没有任何操作权限时整列隐藏，避免留下一列空白按钮
@@ -318,6 +327,25 @@ async function deleteUser(row) {
       pagination.page -= 1
     }
     loadUsers()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+async function kickoutUser(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定让「${row.username}」的全部登录会话立即失效吗？该用户需要重新登录。`,
+      '强制下线',
+      { type: 'warning' }
+    )
+  } catch (error) {
+    return
+  }
+
+  try {
+    const res = await kickoutUserApi(row.id)
+    ElMessage.success(`已下线 ${res.data} 个会话`)
   } catch (error) {
     // 拦截器已提示
   }

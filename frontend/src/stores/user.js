@@ -9,9 +9,9 @@ export const useUserStore = defineStore('user', () => {
 
   const isLoggedIn = computed(() => !!token.value)
 
-  async function login(username, password) {
+  async function login(username, password, captchaKey, captchaCode) {
     try {
-      const res = await loginApi(username, password)
+      const res = await loginApi(username, password, captchaKey, captchaCode)
       token.value = res.data.token
       localStorage.setItem('token', token.value)
       await getUserInfo()

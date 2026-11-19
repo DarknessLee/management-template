@@ -11,7 +11,7 @@
             v-model="loginForm.username" 
             type="text" 
             placeholder="请输入用户名"
-            prefix-icon="el-icon-user"
+            :prefix-icon="icons.User"
             size="large"
             @keyup.enter="handleLogin"
           />
@@ -21,11 +21,32 @@
             v-model="loginForm.password" 
             type="password" 
             placeholder="请输入密码"
-            prefix-icon="el-icon-lock"
+            :prefix-icon="icons.Lock"
             size="large"
             show-password
             @keyup.enter="handleLogin"
           />
+        </el-form-item>
+        <el-form-item prop="captchaCode">
+          <div class="captcha-row">
+            <el-input
+              v-model="loginForm.captchaCode"
+              type="text"
+              placeholder="请输入验证码"
+              size="large"
+              maxlength="4"
+              @keyup.enter="handleLogin"
+            />
+            <img
+              v-if="captchaImage"
+              :src="captchaImage"
+              class="captcha-img"
+              alt="验证码"
+              title="点击刷新"
+              @click="loadCaptcha"
+            />
+            <div v-else class="captcha-img captcha-placeholder" @click="loadCaptcha">加载中</div>
+          </div>
         </el-form-item>
         <!-- 让回车也触发登录事件 -->
         <el-form-item>
@@ -48,20 +69,28 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { User, Lock } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getCaptchaApi } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
+// 局部注册图标组件，供 el-input 的 prefix-icon 使用
+const icons = { User, Lock }
+
 const loginFormRef = ref(null)
 const loading = ref(false)
+const captchaImage = ref('')
+const captchaKey = ref('')
 
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 
 const rules = {
@@ -72,7 +101,24 @@ const rules = {
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度在6到20个字符', trigger: 'blur' }
+  ],
+  captchaCode: [
+    { required: true, message: '请输入验证码', trigger: 'blur' }
   ]
+}
+
+onMounted(() => {
+  loadCaptcha()
+})
+
+async function loadCaptcha() {
+  try {
+    const res = await getCaptchaApi()
+    captchaKey.value = res.data.key
+    captchaImage.value = res.data.image
+  } catch (error) {
+    // 拦截器已提示；保留占位符让用户可点击重试
+  }
 }
 
 async function handleLogin() {
@@ -84,10 +130,19 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const ok = await userStore.login(loginForm.username, loginForm.password)
+    const ok = await userStore.login(
+      loginForm.username,
+      loginForm.password,
+      captchaKey.value,
+      loginForm.captchaCode
+    )
     if (ok) {
       ElMessage.success('登录成功')
       router.push('/dashboard')
+    } else {
+      // 验证码一次性使用，失败后必须换一张，否则重试也会报"已过期"
+      loginForm.captchaCode = ''
+      loadCaptcha()
     }
   } finally {
     loading.value = false
@@ -137,6 +192,29 @@ async function handleLogin() {
   width: 100%;
   height: 44px;
   font-size: 16px;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.captcha-img {
+  width: 120px;
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.captcha-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 12px;
 }
 
 .login-tips {

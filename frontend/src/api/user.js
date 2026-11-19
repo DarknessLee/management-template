@@ -1,13 +1,22 @@
 import request from '@/utils/request'
 
-export function loginApi(username, password) {
+export function loginApi(username, password, captchaKey, captchaCode) {
   return request({
     url: '/auth/login',
     method: 'post',
     data: {
       username,
-      password
+      password,
+      captchaKey,
+      captchaCode
     }
+  })
+}
+
+export function getCaptchaApi() {
+  return request({
+    url: '/auth/captcha',
+    method: 'get'
   })
 }
 
@@ -60,5 +69,12 @@ export function deleteUserApi(id) {
   return request({
     url: `/users/${id}`,
     method: 'delete'
+  })
+}
+
+export function kickoutUserApi(id) {
+  return request({
+    url: `/auth/kickout/${id}`,
+    method: 'post'
   })
 }

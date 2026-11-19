@@ -32,7 +32,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
                 // /uploads/** 是静态资源：<img> 标签不会带 Authorization 头，必须放行
-                .excludePathPatterns("/auth/login", "/error", "/uploads/**");
+                // 登录前接口：验证码与登录本身不能要求 token
+                .excludePathPatterns("/auth/login", "/auth/captcha", "/error", "/uploads/**");
     }
 
     /**

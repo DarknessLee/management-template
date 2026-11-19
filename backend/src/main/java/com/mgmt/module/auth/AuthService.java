@@ -18,6 +18,7 @@ import com.mgmt.security.AuthInterceptor;
 import com.mgmt.security.JwtUtil;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,10 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final String FAIL_KEY_PREFIX = "mgmt:auth:login-fail:";
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -37,15 +42,37 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
+    private final CaptchaService captchaService;
+
+    @Value("${app.login.max-fail:5}")
+    private int maxFail;
+
+    @Value("${app.login.fail-window-minutes:15}")
+    private int failWindowMinutes;
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
+        // 先验验证码：拦掉脚本化的无限次尝试，再谈账号锁定
+        captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode());
+
+        String failKey = FAIL_KEY_PREFIX + request.getUsername();
+        int fails = currentFails(failKey);
+        if (fails >= maxFail) {
+            throw new BizException(400, "失败次数过多，请 " + remainingMinutes(failKey) + " 分钟后再试");
+        }
+
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, request.getUsername()));
         // 用户不存在和密码错误返回同一提示，避免被枚举出有效用户名
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BizException(400, "用户名或密码错误");
+            int remaining = recordFailure(failKey, fails);
+            if (remaining <= 0) {
+                throw new BizException(400, "失败次数过多，请 " + failWindowMinutes + " 分钟后再试");
+            }
+            throw new BizException(400, "用户名或密码错误，还可尝试 " + remaining + " 次");
         }
+        // 登录成功清空计数，避免历史失败影响下一次
+        redisTemplate.delete(failKey);
         if (!Integer.valueOf(1).equals(user.getStatus())) {
             throw new BizException(400, "账号已被禁用，请联系管理员");
         }
@@ -84,6 +111,48 @@ public class AuthService {
         vo.setPermissions(permissionService.permissionsOf(user.getId()));
         vo.setAvatar(user.getAvatar() == null ? "" : user.getAvatar());
         return vo;
+    }
+
+    /**
+     * 一次性失效某个用户的全部会话，供"强制下线"和"修改密码"复用。
+     * 返回被清理的 token 数量，便于前端提示。
+     */
+    public int invalidateAllSessions(Long userId) {
+        String sessionKey = AuthInterceptor.USER_TOKENS_KEY_PREFIX + userId;
+        Set<String> tokens = redisTemplate.opsForSet().members(sessionKey);
+        if (tokens == null || tokens.isEmpty()) {
+            redisTemplate.delete(sessionKey);
+            return 0;
+        }
+        tokens.forEach(token -> redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token));
+        redisTemplate.delete(sessionKey);
+        return tokens.size();
+    }
+
+    private int currentFails(String key) {
+        String value = redisTemplate.opsForValue().get(key);
+        return value == null ? 0 : Integer.parseInt(value);
+    }
+
+    /**
+     * 失败计数写在 Redis：过期即自动解锁，无需定时任务清理。
+     * 只有第一次失败时设置过期时间，后续失败只做自增，避免每次失败都把窗口往后推。
+     */
+    private int recordFailure(String key, int currentFails) {
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count != null && count == 1) {
+            redisTemplate.expire(key, Duration.ofMinutes(failWindowMinutes));
+        }
+        int total = count == null ? currentFails + 1 : count.intValue();
+        return Math.max(maxFail - total, 0);
+    }
+
+    private long remainingMinutes(String key) {
+        Long seconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+        if (seconds == null || seconds < 0) {
+            return failWindowMinutes;
+        }
+        return Math.max((seconds + 59) / 60, 1);
     }
 
     @Transactional

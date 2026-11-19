@@ -49,6 +49,10 @@ app:
   upload:
     # 相对后端启动目录，最终路径为 backend/uploads
     dir: ./uploads
+  login:
+    # 连续失败达到该次数后锁定账号，窗口期内不再校验密码
+    max-fail: 5
+    fail-window-minutes: 15
   log:
     # 操作日志保留天数：只删除 retention-days 天之前的记录
     retention-days: 30
