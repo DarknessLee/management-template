@@ -31,7 +31,7 @@
             <span>操作日志</span>
           </el-menu-item>
           <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
-            <el-icon><component :is="icons.Setting" /></el-icon>
+            <el-icon><component :is="icons.Operation" /></el-icon>
             <span>系统设置</span>
           </el-menu-item>
         </el-menu>
@@ -82,7 +82,7 @@ import {
   Odometer, 
   User, 
   UserFilled, 
-  Setting, 
+  Operation,
   Document,
   Fold, 
   Expand, 
@@ -99,7 +99,7 @@ const icons = {
   Odometer,
   User,
   UserFilled,
-  Setting,
+  Operation,
   Document,
   Fold,
   Expand,
