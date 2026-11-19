@@ -5,6 +5,7 @@ import com.mgmt.common.Result;
 import com.mgmt.module.user.dto.UserCreateRequest;
 import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
+import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,18 +42,21 @@ public class UserController {
 
     @PostMapping
     @RequirePermission("users:add")
+    @OperationLog(module = "用户管理", action = "新增用户")
     public Result<UserVO> create(@Valid @RequestBody UserCreateRequest request) {
         return Result.ok(userService.create(request));
     }
 
     @PutMapping("/{id}")
     @RequirePermission("users:edit")
+    @OperationLog(module = "用户管理", action = "编辑用户")
     public Result<UserVO> update(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
         return Result.ok(userService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @RequirePermission("users:delete")
+    @OperationLog(module = "用户管理", action = "删除用户")
     public Result<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return Result.ok();

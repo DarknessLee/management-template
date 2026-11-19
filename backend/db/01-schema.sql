@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     real_name   VARCHAR(50)  NOT NULL COMMENT '姓名',
     email       VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
     phone       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
+    avatar      VARCHAR(255) DEFAULT NULL COMMENT '头像相对路径',
     role_id     BIGINT       NOT NULL COMMENT '角色ID',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：1启用 0禁用',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -51,3 +52,23 @@ CREATE TABLE IF NOT EXISTS login_log (
     KEY idx_login_time (login_time),
     KEY idx_user_id (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='登录日志表';
+
+CREATE TABLE IF NOT EXISTS sys_operation_log (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT       DEFAULT NULL COMMENT '操作人ID',
+    username    VARCHAR(50)  DEFAULT NULL COMMENT '操作人登录名（冗余，用户改名后仍可追溯）',
+    module      VARCHAR(50)  NOT NULL COMMENT '业务模块，如 用户管理',
+    action      VARCHAR(50)  NOT NULL COMMENT '操作动作，如 删除用户',
+    method      VARCHAR(10)  DEFAULT NULL COMMENT 'HTTP 方法',
+    uri         VARCHAR(200) DEFAULT NULL COMMENT '请求路径',
+    params      TEXT         DEFAULT NULL COMMENT '请求参数 JSON（已脱敏、已截断）',
+    ip          VARCHAR(50)  DEFAULT NULL COMMENT '客户端 IP',
+    duration_ms BIGINT       NOT NULL DEFAULT 0 COMMENT '耗时（毫秒）',
+    success     TINYINT      NOT NULL DEFAULT 1 COMMENT '结果：1成功 0失败',
+    error_msg   VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+    PRIMARY KEY (id),
+    KEY idx_create_time (create_time),
+    KEY idx_module (module),
+    KEY idx_user_id (user_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='操作日志表';

@@ -61,6 +61,10 @@ public class AuthService {
                 AuthInterceptor.TOKEN_KEY_PREFIX + token,
                 String.valueOf(user.getId()),
                 Duration.ofMinutes(jwtUtil.getExpireMinutes()));
+        // 同时记录到用户会话集合，便于改密码 / 强制下线时一次性清理所有 token
+        String sessionKey = AuthInterceptor.USER_TOKENS_KEY_PREFIX + user.getId();
+        redisTemplate.opsForSet().add(sessionKey, token);
+        redisTemplate.expire(sessionKey, Duration.ofMinutes(jwtUtil.getExpireMinutes()));
 
         return new LoginResponse(token);
     }
@@ -78,7 +82,7 @@ public class AuthService {
         vo.setRealName(user.getRealName());
         vo.setRole(role == null ? "" : role.getCode());
         vo.setPermissions(permissionService.permissionsOf(user.getId()));
-        vo.setAvatar("");
+        vo.setAvatar(user.getAvatar() == null ? "" : user.getAvatar());
         return vo;
     }
 
@@ -95,6 +99,8 @@ public class AuthService {
                         .isNull(LoginLog::getLogoutTime)
                         .set(LoginLog::getLogoutTime, LocalDateTime.now()));
             }
+            Long userId = Long.valueOf(claims.getSubject());
+            redisTemplate.opsForSet().remove(AuthInterceptor.USER_TOKENS_KEY_PREFIX + userId, token);
         } catch (Exception ignored) {
             // token 已失效时没必要让退出接口失败
         }

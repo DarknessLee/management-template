@@ -33,10 +33,22 @@ const routes = [
         meta: { title: '角色管理', icon: 'icon-roles', permission: 'roles:view' }
       },
       {
+        path: 'logs',
+        name: 'Logs',
+        component: () => import('@/views/logs/index.vue'),
+        meta: { title: '操作日志', icon: 'icon-logs', permission: 'logs:view' }
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/settings/index.vue'),
         meta: { title: '系统设置', icon: 'icon-settings', permission: 'settings:view' }
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人中心' }
       }
     ]
   }

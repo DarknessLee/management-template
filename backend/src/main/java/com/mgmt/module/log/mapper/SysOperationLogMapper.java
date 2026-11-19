@@ -1,0 +1,18 @@
+package com.mgmt.module.log.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mgmt.module.log.entity.SysOperationLog;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Param;
+
+import java.time.LocalDateTime;
+
+public interface SysOperationLogMapper extends BaseMapper<SysOperationLog> {
+
+    /**
+     * 分批删除过期日志。带上 LIMIT 后，InnoDB 命中 create_time 索引扫到足够行数就停止，
+     * 不会一次锁住整张表；没有 ORDER BY 也能工作，排序反而会让索引利用变差。
+     */
+    @Delete("DELETE FROM sys_operation_log WHERE create_time < #{before} LIMIT #{batchSize}")
+    int deleteBefore(@Param("before") LocalDateTime before, @Param("batchSize") int batchSize);
+}

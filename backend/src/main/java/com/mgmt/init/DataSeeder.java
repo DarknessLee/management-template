@@ -41,6 +41,8 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedRoles();
         seedUsers();
+        // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
+        ensurePermission("admin", "logs:view");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -53,7 +55,7 @@ public class DataSeeder implements ApplicationRunner {
         rolePermissions.put("admin|管理员|系统管理员，拥有所有权限", List.of(
                 "users:view", "users:add", "users:edit", "users:delete",
                 "roles:view", "roles:add", "roles:edit", "roles:delete",
-                "settings:view", "settings:edit"));
+                "settings:view", "settings:edit", "logs:view"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(
@@ -86,6 +88,21 @@ public class DataSeeder implements ApplicationRunner {
         createUser("user4", "赵六", "user4@example.com", "13800138004", roleIds.get("viewer"), 1);
         createUser("user", "访客用户", "user@example.com", "13800138005", roleIds.get("viewer"), 1);
         log.info("初始化测试用户完成，默认密码 123456");
+    }
+
+    private void ensurePermission(String roleCode, String permission) {
+        SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getCode, roleCode));
+        if (role == null) {
+            return;
+        }
+        long exists = permissionMapper.selectCount(new LambdaQueryWrapper<SysRolePermission>()
+                .eq(SysRolePermission::getRoleId, role.getId())
+                .eq(SysRolePermission::getPermission, permission));
+        if (exists == 0) {
+            permissionMapper.insert(new SysRolePermission(role.getId(), permission));
+            log.info("为角色 {} 补充权限 {}", roleCode, permission);
+        }
     }
 
     private void createUser(String username, String realName, String email, String phone, Long roleId, int status) {

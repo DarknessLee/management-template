@@ -7,6 +7,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -33,6 +35,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<Void> handleUnreadable(HttpMessageNotReadableException e) {
         return Result.error(400, "请求体格式不正确");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<Void> handleUploadSize(MaxUploadSizeExceededException e) {
+        return Result.error(400, "上传文件不能超过 2MB");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Result<Void> handleNotFound(NoResourceFoundException e) {
+        // 静态资源或路径不存在：必须单独处理，否则会被兜底的 Exception 处理器误报为 500
+        return Result.error(404, "资源不存在");
     }
 
     @ExceptionHandler(Exception.class)

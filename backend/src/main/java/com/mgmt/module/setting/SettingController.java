@@ -1,6 +1,7 @@
 package com.mgmt.module.setting;
 
 import com.mgmt.common.Result;
+import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +27,7 @@ public class SettingController {
 
     @PutMapping
     @RequirePermission("settings:edit")
+    @OperationLog(module = "系统设置", action = "修改设置")
     public Result<Void> update(@RequestBody Map<String, Object> body) {
         settingService.update(body);
         return Result.ok();

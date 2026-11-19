@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.nio.file.Paths;
 
 /**
  * Web 层装配：登录拦截器 + 跨域。
@@ -21,11 +24,28 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
 
+    @Value("${app.upload.dir:./uploads}")
+    private String uploadDir;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/auth/login", "/error");
+                // /uploads/** 是静态资源：<img> 标签不会带 Authorization 头，必须放行
+                .excludePathPatterns("/auth/login", "/error", "/uploads/**");
+    }
+
+    /**
+     * 把本地 uploads 目录映射为静态资源，头像 URL 形如 /api/uploads/avatar/xxx.png。
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String location = Paths.get(uploadDir).toAbsolutePath().normalize().toUri().toString();
+        // 目录不存在时 toUri() 不会补结尾斜杠，会被当成单个文件，导致所有请求 404
+        if (!location.endsWith("/")) {
+            location = location + "/";
+        }
+        registry.addResourceHandler("/uploads/**").addResourceLocations(location);
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.module.role.dto.RoleRequest;
 import com.mgmt.module.role.dto.RoleVO;
+import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,18 +38,21 @@ public class RoleController {
 
     @PostMapping
     @RequirePermission("roles:add")
+    @OperationLog(module = "角色管理", action = "新增角色")
     public Result<RoleVO> create(@RequestBody RoleRequest request) {
         return Result.ok(roleService.create(request));
     }
 
     @PutMapping("/{id}")
     @RequirePermission("roles:edit")
+    @OperationLog(module = "角色管理", action = "编辑角色")
     public Result<RoleVO> update(@PathVariable Long id, @RequestBody RoleRequest request) {
         return Result.ok(roleService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @RequirePermission("roles:delete")
+    @OperationLog(module = "角色管理", action = "删除角色")
     public Result<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return Result.ok();

@@ -26,6 +26,10 @@
             <el-icon><component :is="icons.UserFilled" /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
+          <el-menu-item v-if="hasPermission('logs:view')" index="/logs">
+            <el-icon><component :is="icons.Document" /></el-icon>
+            <span>操作日志</span>
+          </el-menu-item>
           <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
             <el-icon><component :is="icons.Setting" /></el-icon>
             <span>系统设置</span>
@@ -46,7 +50,9 @@
         <div class="header-right">
           <el-dropdown @command="handleCommand">
             <div class="user-info">
-              <el-icon><component :is="icons.User" /></el-icon>
+              <el-avatar :size="28" :src="assetUrl(userStore.userInfo?.avatar)">
+                <el-icon><component :is="icons.User" /></el-icon>
+              </el-avatar>
               <span>{{ userStore.userInfo?.realName || '用户' }}</span>
               <el-icon><component :is="icons.ArrowDown" /></el-icon>
             </div>
@@ -71,11 +77,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { assetUrl } from '@/utils/asset'
 import { 
   Odometer, 
   User, 
   UserFilled, 
   Setting, 
+  Document,
   Fold, 
   Expand, 
   ArrowDown 
@@ -92,6 +100,7 @@ const icons = {
   User,
   UserFilled,
   Setting,
+  Document,
   Fold,
   Expand,
   ArrowDown
@@ -112,6 +121,10 @@ onMounted(() => {
 })
 
 async function handleCommand(command) {
+  if (command === 'profile') {
+    router.push('/profile')
+    return
+  }
   if (command === 'logout') {
     await userStore.logout()
     ElMessage.success('已退出登录')

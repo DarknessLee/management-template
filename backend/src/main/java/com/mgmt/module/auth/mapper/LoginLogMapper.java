@@ -2,6 +2,7 @@ package com.mgmt.module.auth.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.mgmt.module.auth.entity.LoginLog;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -21,4 +22,10 @@ public interface LoginLogMapper extends BaseMapper<LoginLog> {
             WHERE logout_time IS NOT NULL AND login_time >= #{start}
             """)
     Double avgLoginMinutes(@Param("start") LocalDateTime start);
+
+    /**
+     * 分批删除过期登录日志，走 idx_login_time 索引，扫够 batchSize 行即停止。
+     */
+    @Delete("DELETE FROM login_log WHERE login_time < #{before} LIMIT #{batchSize}")
+    int deleteBefore(@Param("before") LocalDateTime before, @Param("batchSize") int batchSize);
 }

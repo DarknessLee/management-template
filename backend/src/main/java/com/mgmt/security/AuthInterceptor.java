@@ -25,6 +25,8 @@ import java.io.IOException;
 public class AuthInterceptor implements HandlerInterceptor {
 
     public static final String TOKEN_KEY_PREFIX = "mgmt:auth:token:";
+    /** 用户 -> 该用户所有有效 token 的集合，用于批量失效 */
+    public static final String USER_TOKENS_KEY_PREFIX = "mgmt:auth:user-tokens:";
     private static final String BEARER = "Bearer ";
 
     private final JwtUtil jwtUtil;

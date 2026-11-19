@@ -21,6 +21,11 @@ spring:
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
+  servlet:
+    multipart:
+      # 与业务校验保持一致；Spring 默认只有 1MB，头像稍大就会直接失败
+      max-file-size: 2MB
+      max-request-size: 3MB
 
 mybatis-plus:
   configuration:
@@ -41,6 +46,21 @@ app:
     expire-minutes: 120
   cors:
     allowed-origin: http://localhost:3000
+  upload:
+    # 相对后端启动目录，最终路径为 backend/uploads
+    dir: ./uploads
+  log:
+    # 操作日志保留天数：只删除 retention-days 天之前的记录
+    retention-days: 30
+    # 每天凌晨 3 点执行一次（秒 分 时 日 月 周）
+    cleanup-cron: "0 0 3 * * ?"
+    # 每批删除条数，避免一次性大事务锁表
+    cleanup-batch-size: 1000
+    # 登录日志保留更久：认证事件属于安全审计范围，通常要求保留 6 个月
+    login-retention-days: 180
+    # 错开 30 分钟执行，避免两个清理任务同时抢数据库
+    login-cleanup-cron: "0 30 3 * * ?"
+    login-cleanup-batch-size: 1000
 
 logging:
   level:

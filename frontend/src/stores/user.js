@@ -33,16 +33,20 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function clearAuth() {
+    token.value = ''
+    userInfo.value = null
+    permissions.value = []
+    localStorage.removeItem('token')
+  }
+
   async function logout() {
     try {
       await logoutApi()
     } catch (error) {
       // 后端不可用时也允许本地退出
     } finally {
-      token.value = ''
-      userInfo.value = null
-      permissions.value = []
-      localStorage.removeItem('token')
+      clearAuth()
     }
   }
 
@@ -53,6 +57,7 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn,
     login,
     getUserInfo,
-    logout
+    logout,
+    clearAuth
   }
 })

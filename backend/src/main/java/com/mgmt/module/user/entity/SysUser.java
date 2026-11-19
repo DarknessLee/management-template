@@ -31,6 +31,9 @@ public class SysUser {
 
     private String phone;
 
+    /** 头像相对路径，如 /uploads/avatar/xxx.png */
+    private String avatar;
+
     private Long roleId;
 
     /** 1 启用 0 禁用 */
