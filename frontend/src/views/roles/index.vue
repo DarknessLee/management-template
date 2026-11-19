@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">角色管理</h2>
-      <el-button type="primary" @click="openAddDialog">
+      <el-button v-permission="'roles:add'" type="primary" @click="openAddDialog">
         <el-icon><component :is="icons.Plus" /></el-icon>
         新增角色
       </el-button>
@@ -30,10 +30,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" />
-        <el-table-column label="操作" width="200">
+        <el-table-column v-if="canOperate" label="操作" width="200">
           <template #default="scope">
-            <el-button size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteRole(scope.row)">删除</el-button>
+            <el-button v-permission="'roles:edit'" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+            <el-button v-permission="'roles:delete'" size="small" type="danger" @click="deleteRole(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -76,12 +76,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getRolesApi, createRoleApi, updateRoleApi, deleteRoleApi } from '@/api/role'
+import { useUserStore } from '@/stores/user'
 
 const icons = { Plus }
+
+const userStore = useUserStore()
+const canOperate = computed(() =>
+  userStore.permissions.includes('roles:edit') || userStore.permissions.includes('roles:delete')
+)
 
 const roleList = ref([])
 const dialogVisible = ref(false)

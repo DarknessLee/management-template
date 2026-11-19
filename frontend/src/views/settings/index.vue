@@ -110,8 +110,8 @@
     </div>
 
     <div class="btn-group" style="margin-top: 24px;">
-      <el-button type="primary" @click="saveSettings">保存设置</el-button>
-      <el-button @click="resetSettings">重置</el-button>
+      <el-button v-permission="'settings:edit'" type="primary" @click="saveSettings">保存设置</el-button>
+      <el-button v-permission="'settings:edit'" @click="resetSettings">重置</el-button>
     </div>
   </div>
 </template>

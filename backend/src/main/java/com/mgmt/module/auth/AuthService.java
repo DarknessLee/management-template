@@ -9,6 +9,7 @@ import com.mgmt.module.auth.dto.LoginResponse;
 import com.mgmt.module.auth.dto.UserInfoVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
+import com.mgmt.module.role.PermissionService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
 import com.mgmt.module.user.entity.SysUser;
@@ -31,6 +32,7 @@ public class AuthService {
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
+    private final PermissionService permissionService;
     private final LoginLogMapper loginLogMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -75,6 +77,7 @@ public class AuthService {
         vo.setUsername(user.getUsername());
         vo.setRealName(user.getRealName());
         vo.setRole(role == null ? "" : role.getCode());
+        vo.setPermissions(permissionService.permissionsOf(user.getId()));
         vo.setAvatar("");
         return vo;
     }

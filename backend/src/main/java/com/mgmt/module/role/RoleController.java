@@ -4,6 +4,7 @@ import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.module.role.dto.RoleRequest;
 import com.mgmt.module.role.dto.RoleVO;
+import com.mgmt.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,22 +29,26 @@ public class RoleController {
      * 前端处理列表响应时不需要写两套逻辑。
      */
     @GetMapping
+    @RequirePermission("roles:view")
     public Result<PageResult<RoleVO>> list() {
         List<RoleVO> list = roleService.list();
         return Result.ok(PageResult.of(1, list.size(), list, list.size()));
     }
 
     @PostMapping
+    @RequirePermission("roles:add")
     public Result<RoleVO> create(@RequestBody RoleRequest request) {
         return Result.ok(roleService.create(request));
     }
 
     @PutMapping("/{id}")
+    @RequirePermission("roles:edit")
     public Result<RoleVO> update(@PathVariable Long id, @RequestBody RoleRequest request) {
         return Result.ok(roleService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("roles:delete")
     public Result<Void> delete(@PathVariable Long id) {
         roleService.delete(id);
         return Result.ok();

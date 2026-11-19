@@ -5,6 +5,7 @@ import com.mgmt.common.Result;
 import com.mgmt.module.user.dto.UserCreateRequest;
 import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
+import com.mgmt.security.RequirePermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,6 +26,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
+    @RequirePermission("users:view")
     public Result<PageResult<UserVO>> page(@RequestParam(defaultValue = "1") long page,
                                            @RequestParam(defaultValue = "10") long size,
                                            @RequestParam(required = false) String keyword) {
@@ -32,21 +34,25 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission("users:view")
     public Result<UserVO> get(@PathVariable Long id) {
         return Result.ok(userService.get(id));
     }
 
     @PostMapping
+    @RequirePermission("users:add")
     public Result<UserVO> create(@Valid @RequestBody UserCreateRequest request) {
         return Result.ok(userService.create(request));
     }
 
     @PutMapping("/{id}")
+    @RequirePermission("users:edit")
     public Result<UserVO> update(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
         return Result.ok(userService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission("users:delete")
     public Result<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return Result.ok();

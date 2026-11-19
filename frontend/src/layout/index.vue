@@ -18,15 +18,15 @@
             <el-icon><component :is="icons.Odometer" /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
-          <el-menu-item index="/users">
+          <el-menu-item v-if="hasPermission('users:view')" index="/users">
             <el-icon><component :is="icons.User" /></el-icon>
             <span>用户管理</span>
           </el-menu-item>
-          <el-menu-item index="/roles">
+          <el-menu-item v-if="hasPermission('roles:view')" index="/roles">
             <el-icon><component :is="icons.UserFilled" /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
-          <el-menu-item index="/settings">
+          <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
             <el-icon><component :is="icons.Setting" /></el-icon>
             <span>系统设置</span>
           </el-menu-item>
@@ -100,6 +100,9 @@ const icons = {
 const activeMenu = computed(() => route.path)
 
 const currentPageTitle = computed(() => route.meta.title || '')
+
+// 菜单项按权限显示；没有查看权限的模块连入口都不展示
+const hasPermission = (permission) => userStore.permissions.includes(permission)
 
 // 刷新页面后 pinia 状态丢失，用 token 重新拉一次用户信息
 onMounted(() => {

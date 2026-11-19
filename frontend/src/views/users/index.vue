@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">用户管理</h2>
-      <el-button type="primary" @click="openAddDialog">
+      <el-button v-permission="'users:add'" type="primary" @click="openAddDialog">
         <el-icon><component :is="icons.Plus" /></el-icon>
         新增用户
       </el-button>
@@ -37,16 +37,17 @@
         <el-table-column prop="status" label="状态">
           <template #default="scope">
             <el-switch 
-              :value="scope.row.status === 1" 
+              :model-value="scope.row.status === 1" 
+              :disabled="!canEdit"
               @change="toggleStatus(scope.row)"
             />
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" />
-        <el-table-column label="操作" width="200">
+        <el-table-column v-if="canOperate" label="操作" width="200">
           <template #default="scope">
-            <el-button size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteUser(scope.row)">删除</el-button>
+            <el-button v-permission="'users:edit'" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+            <el-button v-permission="'users:delete'" size="small" type="danger" @click="deleteUser(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -114,8 +115,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getUsersApi, createUserApi, updateUserApi, deleteUserApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
+import { useUserStore } from '@/stores/user'
 
 const icons = { Plus }
+
+const userStore = useUserStore()
+// 没有任何操作权限时整列隐藏，避免留下一列空白按钮
+const canEdit = computed(() => userStore.permissions.includes('users:edit'))
+const canOperate = computed(() => canEdit.value || userStore.permissions.includes('users:delete'))
 
 const userList = ref([])
 const searchKeyword = ref('')

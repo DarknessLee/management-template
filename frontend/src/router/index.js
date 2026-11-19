@@ -24,19 +24,19 @@ const routes = [
         path: 'users',
         name: 'Users',
         component: () => import('@/views/users/index.vue'),
-        meta: { title: '用户管理', icon: 'icon-users' }
+        meta: { title: '用户管理', icon: 'icon-users', permission: 'users:view' }
       },
       {
         path: 'roles',
         name: 'Roles',
         component: () => import('@/views/roles/index.vue'),
-        meta: { title: '角色管理', icon: 'icon-roles' }
+        meta: { title: '角色管理', icon: 'icon-roles', permission: 'roles:view' }
       },
       {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/settings/index.vue'),
-        meta: { title: '系统设置', icon: 'icon-settings' }
+        meta: { title: '系统设置', icon: 'icon-settings', permission: 'settings:view' }
       }
     ]
   }
@@ -47,17 +47,32 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
-  if (to.path !== '/login') {
-    if (!userStore.token) {
-      next('/login')
-    } else {
-      next()
-    }
-  } else {
+  if (to.path === '/login') {
     next()
+    return
   }
+  if (!userStore.token) {
+    next('/login')
+    return
+  }
+  // 刷新页面后 pinia 为空，必须先恢复用户信息和权限，
+  // 否则 v-permission 会认为"没有任何权限"而把按钮全部移除
+  if (!userStore.userInfo) {
+    await userStore.getUserInfo()
+  }
+  if (!userStore.userInfo) {
+    next('/login')
+    return
+  }
+  // 路由级权限：没有查看权限直接回仪表盘
+  const permission = to.meta.permission
+  if (permission && !userStore.permissions.includes(permission)) {
+    next('/dashboard')
+    return
+  }
+  next()
 })
 
 router.afterEach((to) => {

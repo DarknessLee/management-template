@@ -5,6 +5,7 @@ import { loginApi, logoutApi, getUserInfoApi } from '@/api/user'
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
   const userInfo = ref(null)
+  const permissions = ref([])
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -25,8 +26,10 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res = await getUserInfoApi()
       userInfo.value = res.data
+      permissions.value = res.data.permissions || []
     } catch (error) {
       userInfo.value = null
+      permissions.value = []
     }
   }
 
@@ -38,6 +41,7 @@ export const useUserStore = defineStore('user', () => {
     } finally {
       token.value = ''
       userInfo.value = null
+      permissions.value = []
       localStorage.removeItem('token')
     }
   }
@@ -45,6 +49,7 @@ export const useUserStore = defineStore('user', () => {
   return {
     token,
     userInfo,
+    permissions,
     isLoggedIn,
     login,
     getUserInfo,
