@@ -57,6 +57,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "dict:view");
         ensurePermission("admin", "dict:edit");
         ensurePermission("admin", "monitor:view");
+        ensurePermission("admin", "online:view");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -77,6 +78,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("dict:view", "查看字典", "数据字典");
         ensurePermissionDefinition("dict:edit", "管理字典", "数据字典");
         ensurePermissionDefinition("monitor:view", "查看监控", "系统监控");
+        ensurePermissionDefinition("online:view", "查看在线用户", "在线用户");
     }
 
     private void seedMenus() {
@@ -90,6 +92,7 @@ public class DataSeeder implements ApplicationRunner {
         ensureMenu("/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 8);
         ensureMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
         ensureMenu("/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 10);
+        ensureMenu("/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 11);
     }
 
     private void ensureMenu(String path, String title, String component, String icon,
@@ -123,7 +126,7 @@ public class DataSeeder implements ApplicationRunner {
                 "settings:view", "settings:edit", "logs:view",
                 "notice:view", "notice:edit",
                 "dict:view", "dict:edit",
-                "monitor:view"));
+                "monitor:view", "online:view"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(

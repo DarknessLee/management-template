@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -51,7 +53,7 @@ public class AuthService {
     private int failWindowMinutes;
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, String ip) {
         // 先验验证码：拦掉脚本化的无限次尝试，再谈账号锁定
         captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode());
 
@@ -93,6 +95,15 @@ public class AuthService {
         redisTemplate.opsForSet().add(sessionKey, token);
         redisTemplate.expire(sessionKey, Duration.ofMinutes(jwtUtil.getExpireMinutes()));
 
+        // 会话详情供在线用户列表使用：登录时间 + 来源 IP
+        Map<String, String> online = new HashMap<>();
+        online.put("userId", String.valueOf(user.getId()));
+        online.put("loginTime", String.valueOf(System.currentTimeMillis()));
+        online.put("ip", ip == null ? "" : ip);
+        String onlineKey = AuthInterceptor.ONLINE_KEY_PREFIX + token;
+        redisTemplate.opsForHash().putAll(onlineKey, online);
+        redisTemplate.expire(onlineKey, Duration.ofMinutes(jwtUtil.getExpireMinutes()));
+
         return new LoginResponse(token);
     }
 
@@ -124,7 +135,10 @@ public class AuthService {
             redisTemplate.delete(sessionKey);
             return 0;
         }
-        tokens.forEach(token -> redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token));
+        tokens.forEach(token -> {
+            redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token);
+            redisTemplate.delete(AuthInterceptor.ONLINE_KEY_PREFIX + token);
+        });
         redisTemplate.delete(sessionKey);
         return tokens.size();
     }
@@ -157,7 +171,8 @@ public class AuthService {
 
     @Transactional
     public void logout(String token) {
-        // 先删白名单，token 立即失效；再回填退出时间用于统计在线时长
+        // 先删白名单与会话记录，token 立即失效；再回填退出时间用于统计在线时长
+        redisTemplate.delete(AuthInterceptor.ONLINE_KEY_PREFIX + token);
         redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token);
         try {
             Claims claims = jwtUtil.parse(token);

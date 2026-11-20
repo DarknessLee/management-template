@@ -125,6 +125,7 @@ import {
   Collection,
   Menu,
   Monitor,
+  Connection,
   Fold, 
   Expand, 
   ArrowDown 
@@ -155,6 +156,7 @@ const icons = {
   Collection,
   Menu,
   Monitor,
+  Connection,
   Fold,
   Expand,
   ArrowDown

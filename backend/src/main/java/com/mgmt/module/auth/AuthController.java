@@ -1,5 +1,6 @@
 package com.mgmt.module.auth;
 
+import com.mgmt.common.IpUtils;
 import com.mgmt.common.Result;
 import com.mgmt.module.auth.dto.CaptchaVO;
 import com.mgmt.module.auth.dto.LoginRequest;
@@ -7,6 +8,7 @@ import com.mgmt.module.auth.dto.LoginResponse;
 import com.mgmt.module.auth.dto.UserInfoVO;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,8 +42,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return Result.ok(authService.login(request));
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
+        return Result.ok(authService.login(request, IpUtils.clientIp(servletRequest)));
     }
 
     @GetMapping("/userinfo")
