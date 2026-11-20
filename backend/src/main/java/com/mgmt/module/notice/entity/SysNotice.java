@@ -1,0 +1,40 @@
+package com.mgmt.module.notice.entity;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 通知公告。status=1 已发布，0 已下线（含草稿）。
+ */
+@Data
+@TableName("sys_notice")
+public class SysNotice {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    private String title;
+
+    private String content;
+
+    private Integer status;
+
+    /** 最近一次发布时间，下线后保留，便于追溯 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime publishTime;
+
+    @TableField(fill = FieldFill.INSERT)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createTime;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updateTime;
+}

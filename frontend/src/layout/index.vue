@@ -38,6 +38,10 @@
             <el-icon><component :is="icons.Clock" /></el-icon>
             <span>登录日志</span>
           </el-menu-item>
+          <el-menu-item v-if="hasPermission('notice:view')" index="/notices">
+            <el-icon><component :is="icons.Message" /></el-icon>
+            <span>通知公告</span>
+          </el-menu-item>
           <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
             <el-icon><component :is="icons.Operation" /></el-icon>
             <span>系统设置</span>
@@ -56,6 +60,43 @@
           </span>
         </div>
         <div class="header-right">
+          <el-popover
+            v-model:visible="noticePopoverVisible"
+            placement="bottom-end"
+            :width="360"
+            trigger="click"
+          >
+            <template #reference>
+              <el-badge
+                :value="unreadNotices.length"
+                :max="99"
+                :hidden="unreadNotices.length === 0"
+                class="notice-badge"
+              >
+                <el-button class="notice-btn" circle>
+                  <el-icon><component :is="icons.Bell" /></el-icon>
+                </el-button>
+              </el-badge>
+            </template>
+            <div class="notice-panel">
+              <div class="notice-panel-header">
+                <span>未读公告</span>
+                <span class="notice-count">{{ unreadNotices.length }} 条</span>
+              </div>
+              <div v-if="unreadNotices.length === 0" class="notice-empty">暂无未读公告</div>
+              <div v-else class="notice-list">
+                <div
+                  v-for="notice in unreadNotices"
+                  :key="notice.id"
+                  class="notice-item"
+                  @click="openNotice(notice)"
+                >
+                  <p class="notice-title">{{ notice.title }}</p>
+                  <p class="notice-time">{{ notice.publishTime || notice.createTime }}</p>
+                </div>
+              </div>
+            </div>
+          </el-popover>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="28" :src="assetUrl(userStore.userInfo?.avatar)">
@@ -77,6 +118,13 @@
         <router-view />
       </div>
     </main>
+
+    <el-dialog v-model="noticeDialogVisible" :title="currentNotice.title" width="600px">
+      <div class="notice-detail">
+        <p class="notice-detail-time">发布时间：{{ currentNotice.publishTime || '—' }}</p>
+        <p class="notice-detail-content">{{ currentNotice.content }}</p>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -86,6 +134,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { assetUrl } from '@/utils/asset'
+import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import { 
   Odometer, 
   User, 
@@ -94,6 +143,8 @@ import {
   Key,
   Document,
   Clock,
+  Bell,
+  Message,
   Fold, 
   Expand, 
   ArrowDown 
@@ -105,6 +156,11 @@ const userStore = useUserStore()
 
 const sidebarCollapsed = ref(false)
 
+const unreadNotices = ref([])
+const noticePopoverVisible = ref(false)
+const noticeDialogVisible = ref(false)
+const currentNotice = ref({})
+
 const icons = {
   Odometer,
   User,
@@ -113,6 +169,8 @@ const icons = {
   Key,
   Document,
   Clock,
+  Bell,
+  Message,
   Fold,
   Expand,
   ArrowDown
@@ -130,7 +188,32 @@ onMounted(() => {
   if (userStore.token && !userStore.userInfo) {
     userStore.getUserInfo()
   }
+  if (userStore.token) {
+    loadUnreadNotices()
+  }
 })
+
+async function loadUnreadNotices() {
+  try {
+    const res = await getUnreadNoticesApi()
+    unreadNotices.value = res.data
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+// 点击即视为已读：先展示内容，再调用接口并从列表移除
+async function openNotice(notice) {
+  currentNotice.value = notice
+  noticeDialogVisible.value = true
+  noticePopoverVisible.value = false
+  try {
+    await markNoticeReadApi(notice.id)
+    unreadNotices.value = unreadNotices.value.filter(item => item.id !== notice.id)
+  } catch (error) {
+    // 标记失败不影响查看内容
+  }
+}
 
 async function handleCommand(command) {
   if (command === 'profile') {
@@ -240,6 +323,81 @@ async function handleCommand(command) {
 .header-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.notice-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #F5F7FA;
+}
+
+.notice-btn:hover {
+  background: #E4E7ED;
+}
+
+.notice-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #EBEEF5;
+  font-weight: 600;
+  color: #303133;
+}
+
+.notice-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: #909399;
+}
+
+.notice-empty {
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #909399;
+}
+
+.notice-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notice-item {
+  padding: 10px 4px;
+  border-bottom: 1px solid #F2F6FC;
+  cursor: pointer;
+}
+
+.notice-item:hover {
+  background: #F5F7FA;
+}
+
+.notice-title {
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.notice-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.notice-detail-time {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 12px;
+}
+
+.notice-detail-content {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .user-info {

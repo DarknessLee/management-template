@@ -13,7 +13,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.mgmt.module.role.mapper",
         "com.mgmt.module.permission.mapper",
         "com.mgmt.module.setting.mapper",
-        "com.mgmt.module.log.mapper"
+        "com.mgmt.module.log.mapper",
+        "com.mgmt.module.notice.mapper"
 })
 public class MgmtApplication {
 

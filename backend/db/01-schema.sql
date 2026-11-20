@@ -82,3 +82,25 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
     KEY idx_module (module),
     KEY idx_user_id (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='操作日志表';
+
+CREATE TABLE IF NOT EXISTS sys_notice (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    title        VARCHAR(100) NOT NULL COMMENT '公告标题',
+    content      TEXT         NOT NULL COMMENT '公告内容',
+    status       TINYINT      NOT NULL DEFAULT 0 COMMENT '状态：1已发布 0已下线',
+    publish_time DATETIME     DEFAULT NULL COMMENT '最近一次发布时间',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_status_publish (status, publish_time)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='通知公告表';
+
+CREATE TABLE IF NOT EXISTS sys_notice_read (
+    id        BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键',
+    notice_id BIGINT   NOT NULL COMMENT '公告ID',
+    user_id   BIGINT   NOT NULL COMMENT '用户ID',
+    read_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '已读时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_notice_user (notice_id, user_id),
+    KEY idx_user_id (user_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='公告已读记录表';

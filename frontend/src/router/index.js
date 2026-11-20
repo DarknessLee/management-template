@@ -51,6 +51,12 @@ const routes = [
         meta: { title: '登录日志', icon: 'icon-login-logs', permission: 'logs:view' }
       },
       {
+        path: 'notices',
+        name: 'Notices',
+        component: () => import('@/views/notices/index.vue'),
+        meta: { title: '通知公告', icon: 'icon-notices', permission: 'notice:view' }
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/settings/index.vue'),

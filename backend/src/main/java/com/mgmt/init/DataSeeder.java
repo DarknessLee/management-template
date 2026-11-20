@@ -48,6 +48,8 @@ public class DataSeeder implements ApplicationRunner {
         seedUsers();
         // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
         ensurePermission("admin", "logs:view");
+        ensurePermission("admin", "notice:view");
+        ensurePermission("admin", "notice:edit");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -63,6 +65,8 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("settings:view", "查看设置", "系统设置");
         ensurePermissionDefinition("settings:edit", "修改设置", "系统设置");
         ensurePermissionDefinition("logs:view", "查看日志", "操作日志");
+        ensurePermissionDefinition("notice:view", "查看公告", "通知公告");
+        ensurePermissionDefinition("notice:edit", "管理公告", "通知公告");
     }
 
     private void seedRoles() {
@@ -74,7 +78,8 @@ public class DataSeeder implements ApplicationRunner {
         rolePermissions.put("admin|管理员|系统管理员，拥有所有权限", List.of(
                 "users:view", "users:add", "users:edit", "users:delete",
                 "roles:view", "roles:add", "roles:edit", "roles:delete",
-                "settings:view", "settings:edit", "logs:view"));
+                "settings:view", "settings:edit", "logs:view",
+                "notice:view", "notice:edit"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(
