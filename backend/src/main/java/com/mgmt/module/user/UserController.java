@@ -3,6 +3,7 @@ package com.mgmt.module.user;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.module.user.dto.UserCreateRequest;
+import com.mgmt.module.user.dto.UserImportResult;
 import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
 import com.mgmt.security.OperationLog;
@@ -18,6 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/users")
@@ -25,6 +32,35 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final UserExcelService userExcelService;
+
+    @GetMapping("/export")
+    @RequirePermission("users:view")
+    @OperationLog(module = "用户管理", action = "导出用户")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String keyword) {
+        return xlsx(userExcelService.export(keyword), "users-" + LocalDate.now() + ".xlsx");
+    }
+
+    @GetMapping("/import-template")
+    @RequirePermission("users:add")
+    public ResponseEntity<byte[]> importTemplate() {
+        return xlsx(userExcelService.template(), "user-import-template.xlsx");
+    }
+
+    @PostMapping("/import")
+    @RequirePermission("users:add")
+    @OperationLog(module = "用户管理", action = "导入用户")
+    public Result<UserImportResult> importUsers(@RequestParam("file") MultipartFile file) {
+        return Result.ok(userExcelService.importUsers(file));
+    }
+
+    private ResponseEntity<byte[]> xlsx(byte[] data, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
 
     @GetMapping
     @RequirePermission("users:view")

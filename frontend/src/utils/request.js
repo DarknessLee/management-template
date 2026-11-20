@@ -28,6 +28,10 @@ service.interceptors.request.use(
 
 service.interceptors.response.use(
   (response) => {
+    // 文件下载直接返回完整响应，交给调用方处理 Blob 与文件名
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')

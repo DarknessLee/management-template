@@ -34,13 +34,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public PageResult<UserVO> page(long page, long size, String keyword) {
-        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
-            // 包一层 and(...)，避免 or 条件把后面的查询条件"短路"掉
-            wrapper.and(w -> w.like(SysUser::getUsername, keyword)
-                    .or().like(SysUser::getRealName, keyword)
-                    .or().like(SysUser::getEmail, keyword));
-        }
+        LambdaQueryWrapper<SysUser> wrapper = searchWrapper(keyword);
         wrapper.orderByAsc(SysUser::getId);
 
         IPage<SysUser> result = userMapper.selectPage(new Page<>(page, size), wrapper);
@@ -49,6 +43,28 @@ public class UserService {
                 .map(user -> toVO(user, roleCodes))
                 .toList();
         return PageResult.of(result, list);
+    }
+
+    /**
+     * 导出用：不分页，条件与列表页保持一致。
+     */
+    public List<UserVO> listForExport(String keyword) {
+        Map<Long, String> roleCodes = roleCodeMap();
+        return userMapper.selectList(searchWrapper(keyword).orderByAsc(SysUser::getId))
+                .stream()
+                .map(user -> toVO(user, roleCodes))
+                .toList();
+    }
+
+    private LambdaQueryWrapper<SysUser> searchWrapper(String keyword) {
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            // 包一层 and(...)，避免 or 条件把后面的查询条件"短路"掉
+            wrapper.and(w -> w.like(SysUser::getUsername, keyword)
+                    .or().like(SysUser::getRealName, keyword)
+                    .or().like(SysUser::getEmail, keyword));
+        }
+        return wrapper;
     }
 
     public UserVO get(Long id) {

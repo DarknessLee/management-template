@@ -72,6 +72,33 @@ export function deleteUserApi(id) {
   })
 }
 
+export function downloadUserTemplateApi() {
+  return request({
+    url: '/users/import-template',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+export function exportUsersApi(params) {
+  return request({
+    url: '/users/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+export function importUsersApi(file) {
+  const data = new FormData()
+  data.append('file', file)
+  return request({
+    url: '/users/import',
+    method: 'post',
+    data
+  })
+}
+
 export function kickoutUserApi(id) {
   return request({
     url: `/auth/kickout/${id}`,

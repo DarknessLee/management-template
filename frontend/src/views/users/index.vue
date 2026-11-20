@@ -2,10 +2,14 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">用户管理</h2>
-      <el-button v-permission="'users:add'" type="primary" @click="openAddDialog">
-        <el-icon><component :is="icons.Plus" /></el-icon>
-        新增用户
-      </el-button>
+      <div class="header-actions">
+        <el-button v-permission="'users:add'" @click="openImportDialog">导入用户</el-button>
+        <el-button v-permission="'users:view'" @click="exportUsers">导出</el-button>
+        <el-button v-permission="'users:add'" type="primary" @click="openAddDialog">
+          <el-icon><component :is="icons.Plus" /></el-icon>
+          新增用户
+        </el-button>
+      </div>
     </div>
 
     <div class="card">
@@ -74,6 +78,56 @@
       </div>
     </div>
 
+    <el-dialog title="导入用户" v-model="importDialogVisible" width="560px" @closed="resetImport">
+      <el-alert
+        title="请先下载模板，按表头填写后上传 .xlsx 文件；失败的行不影响其他行导入。"
+        type="info"
+        :closable="false"
+        show-icon
+      />
+      <div class="template-line">
+        <el-button link type="primary" @click="downloadTemplate">下载导入模板</el-button>
+      </div>
+      <el-upload
+        ref="importUploadRef"
+        :auto-upload="false"
+        :limit="1"
+        accept=".xlsx"
+        :on-change="handleImportFileChange"
+        :on-remove="handleImportFileRemove"
+      >
+        <el-button>选择文件</el-button>
+        <template #tip>
+          <div class="el-upload__tip">仅支持 .xlsx，角色编码需与角色管理中的编码一致</div>
+        </template>
+      </el-upload>
+
+      <div v-if="importResult" class="import-result">
+        <el-alert
+          :title="`共 ${importResult.total} 行，成功 ${importResult.success} 行，失败 ${importResult.failed} 行`"
+          :type="importResult.failed > 0 ? 'warning' : 'success'"
+          :closable="false"
+          show-icon
+        />
+        <el-table
+          v-if="importResult.failed > 0"
+          :data="importResult.errors"
+          border
+          size="small"
+          max-height="240"
+          class="error-table"
+        >
+          <el-table-column prop="row" label="行号" width="80" />
+          <el-table-column prop="message" label="失败原因" />
+        </el-table>
+      </div>
+
+      <template #footer>
+        <el-button @click="importDialogVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog 
       :title="dialogTitle" 
       v-model="dialogVisible"
@@ -122,7 +176,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi } from '@/api/user'
+import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi, importUsersApi, exportUsersApi, downloadUserTemplateApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
 import { useUserStore } from '@/stores/user'
 
@@ -364,9 +418,90 @@ function getRoleType(role) {
   }
   return typeMap[role] || 'info'
 }
+const importDialogVisible = ref(false)
+const importUploadRef = ref(null)
+const importFile = ref(null)
+const importing = ref(false)
+const importResult = ref(null)
+
+function openImportDialog() {
+  importDialogVisible.value = true
+}
+
+function handleImportFileChange(uploadFile) {
+  importFile.value = uploadFile.raw
+}
+
+function handleImportFileRemove() {
+  importFile.value = null
+}
+
+function resetImport() {
+  importFile.value = null
+  importResult.value = null
+  importUploadRef.value?.clearFiles()
+}
+
+async function downloadTemplate() {
+  try {
+    const response = await downloadUserTemplateApi()
+    saveBlob(response, 'user-import-template.xlsx')
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+async function submitImport() {
+  if (!importFile.value) {
+    ElMessage.warning('请先选择要导入的文件')
+    return
+  }
+
+  importing.value = true
+  try {
+    const res = await importUsersApi(importFile.value)
+    importResult.value = res.data
+    if (res.data.success > 0) {
+      loadUsers()
+    }
+    if (res.data.failed === 0) {
+      ElMessage.success(`导入成功 ${res.data.success} 条`)
+    }
+  } catch (error) {
+    // 拦截器已提示
+  } finally {
+    importing.value = false
+  }
+}
+
+async function exportUsers() {
+  try {
+    const response = await exportUsersApi({ keyword: searchKeyword.value || undefined })
+    saveBlob(response, 'users.xlsx')
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function saveBlob(response, fallbackName) {
+  const disposition = response.headers['content-disposition'] || ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  const filename = match ? decodeURIComponent(match[1]) : fallbackName
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .search-bar {
   display: flex;
   gap: 12px;
@@ -381,5 +516,18 @@ function getRoleType(role) {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.template-line {
+  margin: 12px 0;
+  text-align: right;
+}
+
+.import-result {
+  margin-top: 16px;
+}
+
+.error-table {
+  margin-top: 12px;
 }
 </style>
