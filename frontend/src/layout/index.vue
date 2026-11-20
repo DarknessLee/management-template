@@ -126,6 +126,7 @@ import {
   Menu,
   Monitor,
   Connection,
+  OfficeBuilding,
   Fold, 
   Expand, 
   ArrowDown 
@@ -157,6 +158,7 @@ const icons = {
   Menu,
   Monitor,
   Connection,
+  OfficeBuilding,
   Fold,
   Expand,
   ArrowDown

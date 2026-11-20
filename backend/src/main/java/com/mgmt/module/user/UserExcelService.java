@@ -49,7 +49,7 @@ public class UserExcelService {
         try (XSSFWorkbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("用户");
-            String[] headers = {"ID", "用户名", "姓名", "邮箱", "手机号", "角色编码", "状态", "创建时间"};
+            String[] headers = {"ID", "用户名", "姓名", "部门", "邮箱", "手机号", "角色编码", "状态", "创建时间"};
             writeHeader(workbook, sheet, headers);
 
             int rowIndex = 1;
@@ -58,13 +58,14 @@ public class UserExcelService {
                 row.createCell(0).setCellValue(user.getId());
                 row.createCell(1).setCellValue(nullToEmpty(user.getUsername()));
                 row.createCell(2).setCellValue(nullToEmpty(user.getRealName()));
-                row.createCell(3).setCellValue(nullToEmpty(user.getEmail()));
-                row.createCell(4).setCellValue(nullToEmpty(user.getPhone()));
-                row.createCell(5).setCellValue(nullToEmpty(user.getRole()));
-                row.createCell(6).setCellValue(user.getStatus() != null && user.getStatus() == 1 ? "启用" : "禁用");
-                row.createCell(7).setCellValue(user.getCreateTime() == null ? "" : user.getCreateTime().format(TIME_FORMATTER));
+                row.createCell(3).setCellValue(nullToEmpty(user.getDeptName()));
+                row.createCell(4).setCellValue(nullToEmpty(user.getEmail()));
+                row.createCell(5).setCellValue(nullToEmpty(user.getPhone()));
+                row.createCell(6).setCellValue(nullToEmpty(user.getRole()));
+                row.createCell(7).setCellValue(user.getStatus() != null && user.getStatus() == 1 ? "启用" : "禁用");
+                row.createCell(8).setCellValue(user.getCreateTime() == null ? "" : user.getCreateTime().format(TIME_FORMATTER));
             }
-            setWidths(sheet, 8, 16, 12, 28, 18, 12, 10, 22);
+            setWidths(sheet, 8, 16, 12, 16, 28, 18, 12, 10, 22);
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {

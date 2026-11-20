@@ -26,5 +26,7 @@ public class UserCreateRequest {
     @NotBlank(message = "请选择角色")
     private String role;
 
+    private Long deptId;
+
     private Integer status;
 }

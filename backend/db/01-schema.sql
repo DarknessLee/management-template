@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     phone       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
     avatar      VARCHAR(255) DEFAULT NULL COMMENT '头像相对路径',
     role_id     BIGINT       NOT NULL COMMENT '角色ID',
+    dept_id     BIGINT       NOT NULL DEFAULT 0 COMMENT '所属部门ID，0表示未分配',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：1启用 0禁用',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
@@ -44,6 +45,19 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
     permission VARCHAR(50) NOT NULL COMMENT '权限标识，如 users:view',
     PRIMARY KEY (role_id, permission)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='角色权限表';
+
+CREATE TABLE IF NOT EXISTS sys_dept (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    parent_id   BIGINT       NOT NULL DEFAULT 0 COMMENT '上级部门ID，0为顶级',
+    name        VARCHAR(50)  NOT NULL COMMENT '部门名称',
+    leader      VARCHAR(50)  DEFAULT NULL COMMENT '负责人',
+    phone       VARCHAR(20)  DEFAULT NULL COMMENT '联系电话',
+    sort        INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (id),
+    KEY idx_parent_id (parent_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='部门表';
 
 CREATE TABLE IF NOT EXISTS sys_setting (
     setting_key  VARCHAR(50) NOT NULL COMMENT '配置分组：security/basic/notification',

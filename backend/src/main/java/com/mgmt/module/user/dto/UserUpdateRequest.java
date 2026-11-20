@@ -21,5 +21,7 @@ public class UserUpdateRequest {
 
     private String role;
 
+    private Long deptId;
+
     private Integer status;
 }

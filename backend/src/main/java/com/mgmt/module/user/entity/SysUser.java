@@ -36,6 +36,9 @@ public class SysUser {
 
     private Long roleId;
 
+    /** 所属部门ID，0 表示未分配 */
+    private Long deptId;
+
     /** 1 启用 0 禁用 */
     private Integer status;
 

@@ -1,6 +1,8 @@
 package com.mgmt.init;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mgmt.module.dept.entity.SysDept;
+import com.mgmt.module.dept.mapper.SysDeptMapper;
 import com.mgmt.module.permission.entity.SysPermission;
 import com.mgmt.module.permission.mapper.SysPermissionMapper;
 import com.mgmt.module.menu.entity.SysMenu;
@@ -37,6 +39,7 @@ public class DataSeeder implements ApplicationRunner {
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper permissionMapper;
     private final SysPermissionMapper permissionDefinitionMapper;
+    private final SysDeptMapper deptMapper;
     private final MenuMapper menuMapper;
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -48,6 +51,7 @@ public class DataSeeder implements ApplicationRunner {
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedMenus();
+        seedDepts();
         seedRoles();
         seedUsers();
         // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
@@ -59,6 +63,8 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "monitor:view");
         ensurePermission("admin", "online:view");
         ensurePermission("admin", "logs:clean");
+        ensurePermission("admin", "dept:view");
+        ensurePermission("admin", "dept:edit");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -81,6 +87,8 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("dict:edit", "管理字典", "数据字典");
         ensurePermissionDefinition("monitor:view", "查看监控", "系统监控");
         ensurePermissionDefinition("online:view", "查看在线用户", "在线用户");
+        ensurePermissionDefinition("dept:view", "查看部门", "部门管理");
+        ensurePermissionDefinition("dept:edit", "维护部门", "部门管理");
     }
 
     private void seedMenus() {
@@ -95,6 +103,7 @@ public class DataSeeder implements ApplicationRunner {
         ensureMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
         ensureMenu("/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 10);
         ensureMenu("/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 11);
+        ensureMenu("/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 12);
     }
 
     private void ensureMenu(String path, String title, String component, String icon,
@@ -116,6 +125,27 @@ public class DataSeeder implements ApplicationRunner {
         log.info("初始化菜单 {}", path);
     }
 
+    private void seedDepts() {
+        if (deptMapper.selectCount(null) > 0) {
+            return;
+        }
+        SysDept tech = createDept(0L, "技术部", "张伟", "13800000001", 1);
+        createDept(tech.getId(), "研发组", "李强", "13800000002", 1);
+        createDept(tech.getId(), "测试组", "王敏", "13800000003", 2);
+        log.info("初始化部门完成");
+    }
+
+    private SysDept createDept(Long parentId, String name, String leader, String phone, int sort) {
+        SysDept dept = new SysDept();
+        dept.setParentId(parentId);
+        dept.setName(name);
+        dept.setLeader(leader);
+        dept.setPhone(phone);
+        dept.setSort(sort);
+        deptMapper.insert(dept);
+        return dept;
+    }
+
     private void seedRoles() {
         if (roleMapper.selectCount(null) > 0) {
             return;
@@ -128,7 +158,8 @@ public class DataSeeder implements ApplicationRunner {
                 "settings:view", "settings:edit", "logs:view", "logs:clean",
                 "notice:view", "notice:edit",
                 "dict:view", "dict:edit",
-                "monitor:view", "online:view"));
+                "monitor:view", "online:view",
+                "dept:view", "dept:edit"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(

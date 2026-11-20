@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.dept.entity.SysDept;
+import com.mgmt.module.dept.mapper.SysDeptMapper;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
 import com.mgmt.module.user.dto.UserCreateRequest;
@@ -31,6 +33,7 @@ public class UserService {
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
+    private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
 
     public PageResult<UserVO> page(long page, long size, String keyword) {
@@ -39,8 +42,9 @@ public class UserService {
 
         IPage<SysUser> result = userMapper.selectPage(new Page<>(page, size), wrapper);
         Map<Long, String> roleCodes = roleCodeMap();
+        Map<Long, String> deptNames = deptNameMap();
         List<UserVO> list = result.getRecords().stream()
-                .map(user -> toVO(user, roleCodes))
+                .map(user -> toVO(user, roleCodes, deptNames))
                 .toList();
         return PageResult.of(result, list);
     }
@@ -50,9 +54,10 @@ public class UserService {
      */
     public List<UserVO> listForExport(String keyword) {
         Map<Long, String> roleCodes = roleCodeMap();
+        Map<Long, String> deptNames = deptNameMap();
         return userMapper.selectList(searchWrapper(keyword).orderByAsc(SysUser::getId))
                 .stream()
-                .map(user -> toVO(user, roleCodes))
+                .map(user -> toVO(user, roleCodes, deptNames))
                 .toList();
     }
 
@@ -68,7 +73,7 @@ public class UserService {
     }
 
     public UserVO get(Long id) {
-        return toVO(requireUser(id), roleCodeMap());
+        return toVO(requireUser(id), roleCodeMap(), deptNameMap());
     }
 
     @Transactional
@@ -86,10 +91,11 @@ public class UserService {
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
         user.setRoleId(requireRole(req.getRole()).getId());
+        user.setDeptId(requireDeptId(req.getDeptId()));
         user.setStatus(req.getStatus() == null ? 1 : req.getStatus());
         userMapper.insert(user);
 
-        return toVO(user, roleCodeMap());
+        return toVO(user, roleCodeMap(), deptNameMap());
     }
 
     @Transactional
@@ -120,12 +126,15 @@ public class UserService {
         if (StringUtils.hasText(req.getRole())) {
             user.setRoleId(requireRole(req.getRole()).getId());
         }
+        if (req.getDeptId() != null) {
+            user.setDeptId(requireDeptId(req.getDeptId()));
+        }
         if (req.getStatus() != null) {
             user.setStatus(req.getStatus());
         }
 
         userMapper.updateById(user);
-        return toVO(user, roleCodeMap());
+        return toVO(user, roleCodeMap(), deptNameMap());
     }
 
     @Transactional
@@ -159,7 +168,22 @@ public class UserService {
                 .collect(Collectors.toMap(SysRole::getId, SysRole::getCode));
     }
 
-    private UserVO toVO(SysUser user, Map<Long, String> roleCodes) {
+    private Map<Long, String> deptNameMap() {
+        return deptMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysDept::getId, SysDept::getName));
+    }
+
+    private Long requireDeptId(Long deptId) {
+        if (deptId == null || deptId == 0) {
+            return 0L;
+        }
+        if (deptMapper.selectById(deptId) == null) {
+            throw new BizException("部门不存在");
+        }
+        return deptId;
+    }
+
+    private UserVO toVO(SysUser user, Map<Long, String> roleCodes, Map<Long, String> deptNames) {
         UserVO vo = new UserVO();
         vo.setId(user.getId());
         vo.setUsername(user.getUsername());
@@ -167,6 +191,8 @@ public class UserService {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setRole(roleCodes.getOrDefault(user.getRoleId(), ""));
+        vo.setDeptId(user.getDeptId() == null ? 0L : user.getDeptId());
+        vo.setDeptName(deptNames.getOrDefault(vo.getDeptId(), ""));
         vo.setStatus(user.getStatus());
         vo.setCreateTime(user.getCreateTime());
         return vo;

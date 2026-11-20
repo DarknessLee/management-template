@@ -29,6 +29,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="realName" label="姓名" />
+        <el-table-column prop="deptName" label="部门" />
         <el-table-column prop="email" label="邮箱" />
         <el-table-column prop="phone" label="手机号" />
         <el-table-column prop="role" label="角色">
@@ -163,6 +164,18 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="所属部门">
+          <el-tree-select
+            v-model="userForm.deptId"
+            :data="deptTree"
+            :props="{ label: 'name', children: 'children' }"
+            node-key="id"
+            check-strictly
+            clearable
+            placeholder="请选择部门"
+            style="width: 100%;"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -178,6 +191,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi, importUsersApi, exportUsersApi, downloadUserTemplateApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
+import { getDeptOptionsApi } from '@/api/dept'
 import { useUserStore } from '@/stores/user'
 
 const icons = { Plus, Search }
@@ -194,6 +208,8 @@ const dialogTitle = ref('新增用户')
 const isEdit = ref(false)
 const userFormRef = ref(null)
 const roleOptions = ref([])
+const deptOptions = ref([])
+const deptTree = computed(() => buildDeptTree(deptOptions.value))
 
 const pagination = reactive({
   page: 1,
@@ -209,6 +225,7 @@ const userForm = reactive({
   email: '',
   phone: '',
   role: '',
+  deptId: null,
   status: 1
 })
 
@@ -239,8 +256,34 @@ const formRules = computed(() => ({
 
 onMounted(() => {
   loadRoleOptions()
+  loadDeptOptions()
   loadUsers()
 })
+
+async function loadDeptOptions() {
+  try {
+    const res = await getDeptOptionsApi()
+    deptOptions.value = res.data
+  } catch (error) {
+    deptOptions.value = []
+  }
+}
+
+function buildDeptTree(items) {
+  const map = new Map()
+  items.forEach(item => map.set(item.id, { ...item, children: [] }))
+
+  const roots = []
+  map.forEach(node => {
+    const parent = map.get(node.parentId)
+    if (parent && node.parentId !== 0) {
+      parent.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  return roots
+}
 
 async function loadRoleOptions() {
   try {
@@ -308,6 +351,7 @@ function openEditDialog(row) {
     email: row.email,
     phone: row.phone,
     role: row.role,
+    deptId: row.deptId || null,
     status: row.status
   })
   dialogVisible.value = true
@@ -321,6 +365,7 @@ function resetForm() {
   userForm.email = ''
   userForm.phone = ''
   userForm.role = ''
+  userForm.deptId = null
   userForm.status = 1
 }
 
@@ -334,6 +379,7 @@ async function saveUser() {
     email: userForm.email,
     phone: userForm.phone,
     role: userForm.role,
+    deptId: userForm.deptId || 0,
     status: userForm.status
   }
   // 编辑时密码留空表示不修改

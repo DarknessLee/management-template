@@ -17,6 +17,10 @@ public class UserVO {
     /** 前端表格和下拉框都使用角色 code，不暴露 roleId */
     private String role;
 
+    private Long deptId;
+
+    private String deptName;
+
     private Integer status;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
