@@ -1,5 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useMenuStore } from '@/stores/menu'
+
+// 菜单表里的 component 形如 views/users/index.vue，这里建立懒加载映射
+const viewModules = import.meta.glob('../views/**/*.vue')
 
 const routes = [
   {
@@ -18,49 +22,7 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '仪表盘', icon: 'icon-dashboard' }
-      },
-      {
-        path: 'users',
-        name: 'Users',
-        component: () => import('@/views/users/index.vue'),
-        meta: { title: '用户管理', icon: 'icon-users', permission: 'users:view' }
-      },
-      {
-        path: 'roles',
-        name: 'Roles',
-        component: () => import('@/views/roles/index.vue'),
-        meta: { title: '角色管理', icon: 'icon-roles', permission: 'roles:view' }
-      },
-      {
-        path: 'permissions',
-        name: 'Permissions',
-        component: () => import('@/views/permissions/index.vue'),
-        meta: { title: '权限点管理', icon: 'icon-permissions', permission: 'roles:view' }
-      },
-      {
-        path: 'logs',
-        name: 'Logs',
-        component: () => import('@/views/logs/index.vue'),
-        meta: { title: '操作日志', icon: 'icon-logs', permission: 'logs:view' }
-      },
-      {
-        path: 'login-logs',
-        name: 'LoginLogs',
-        component: () => import('@/views/loginLogs/index.vue'),
-        meta: { title: '登录日志', icon: 'icon-login-logs', permission: 'logs:view' }
-      },
-      {
-        path: 'notices',
-        name: 'Notices',
-        component: () => import('@/views/notices/index.vue'),
-        meta: { title: '通知公告', icon: 'icon-notices', permission: 'notice:view' }
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/settings/index.vue'),
-        meta: { title: '系统设置', icon: 'icon-settings', permission: 'settings:view' }
+        meta: { title: '仪表盘' }
       },
       {
         path: 'profile',
@@ -77,8 +39,37 @@ const router = createRouter({
   routes
 })
 
+/**
+ * 把后端菜单注册成 Layout 的子路由。
+ * 仪表盘已有静态路由，跳过避免重复注册。
+ */
+function registerMenuRoutes(menus) {
+  menus.forEach((menu) => {
+    if (menu.path === '/dashboard' || router.hasRoute(menu.path)) {
+      return
+    }
+    const component = viewModules[`../${menu.component}`]
+    if (!component) {
+      console.warn(`未找到菜单组件：${menu.component}`)
+      return
+    }
+    router.addRoute('Layout', {
+      path: menu.path,
+      name: menu.path,
+      component,
+      meta: {
+        title: menu.title,
+        icon: menu.icon,
+        permission: menu.permission
+      }
+    })
+  })
+}
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
+  const menuStore = useMenuStore()
+
   if (to.path === '/login') {
     next()
     return
@@ -96,6 +87,30 @@ router.beforeEach(async (to, from, next) => {
     next('/login')
     return
   }
+
+  // 首次进入时拉取菜单并注册路由，然后按路径重新匹配当前地址
+  if (!menuStore.loaded) {
+    try {
+      await menuStore.loadMenus()
+      registerMenuRoutes(menuStore.menus)
+    } catch (error) {
+      // 菜单加载失败时避免重定向死循环，仪表盘仍可访问
+      menuStore.loaded = true
+    }
+    if (router.resolve(to.fullPath).matched.length === 0) {
+      next('/dashboard')
+    } else {
+      next({ path: to.path, query: to.query, hash: to.hash, replace: true })
+    }
+    return
+  }
+
+  // 动态路由注册完后仍匹配不到，说明地址不存在
+  if (to.matched.length === 0) {
+    next('/dashboard')
+    return
+  }
+
   // 路由级权限：没有查看权限直接回仪表盘
   const permission = to.meta.permission
   if (permission && !userStore.permissions.includes(permission)) {

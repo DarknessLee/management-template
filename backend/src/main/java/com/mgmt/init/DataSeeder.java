@@ -3,6 +3,8 @@ package com.mgmt.init;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.module.permission.entity.SysPermission;
 import com.mgmt.module.permission.mapper.SysPermissionMapper;
+import com.mgmt.module.menu.entity.SysMenu;
+import com.mgmt.module.menu.mapper.MenuMapper;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.entity.SysRolePermission;
 import com.mgmt.module.role.mapper.SysRoleMapper;
@@ -35,6 +37,7 @@ public class DataSeeder implements ApplicationRunner {
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper permissionMapper;
     private final SysPermissionMapper permissionDefinitionMapper;
+    private final MenuMapper menuMapper;
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final SettingService settingService;
@@ -44,12 +47,15 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
+        seedMenus();
         seedRoles();
         seedUsers();
         // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
         ensurePermission("admin", "logs:view");
         ensurePermission("admin", "notice:view");
         ensurePermission("admin", "notice:edit");
+        ensurePermission("admin", "dict:view");
+        ensurePermission("admin", "dict:edit");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -67,6 +73,39 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("logs:view", "查看日志", "操作日志");
         ensurePermissionDefinition("notice:view", "查看公告", "通知公告");
         ensurePermissionDefinition("notice:edit", "管理公告", "通知公告");
+        ensurePermissionDefinition("dict:view", "查看字典", "数据字典");
+        ensurePermissionDefinition("dict:edit", "管理字典", "数据字典");
+    }
+
+    private void seedMenus() {
+        ensureMenu("/dashboard", "仪表盘", "views/dashboard/index.vue", "Odometer", null, 1);
+        ensureMenu("/users", "用户管理", "views/users/index.vue", "User", "users:view", 2);
+        ensureMenu("/roles", "角色管理", "views/roles/index.vue", "UserFilled", "roles:view", 3);
+        ensureMenu("/permissions", "权限点管理", "views/permissions/index.vue", "Key", "roles:view", 4);
+        ensureMenu("/logs", "操作日志", "views/logs/index.vue", "Document", "logs:view", 5);
+        ensureMenu("/login-logs", "登录日志", "views/loginLogs/index.vue", "Clock", "logs:view", 6);
+        ensureMenu("/notices", "通知公告", "views/notices/index.vue", "Message", "notice:view", 7);
+        ensureMenu("/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 8);
+        ensureMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
+    }
+
+    private void ensureMenu(String path, String title, String component, String icon,
+                            String permission, int sort) {
+        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, path));
+        if (exists > 0) {
+            return;
+        }
+        SysMenu menu = new SysMenu();
+        menu.setPath(path);
+        menu.setTitle(title);
+        menu.setComponent(component);
+        menu.setIcon(icon);
+        menu.setPermission(permission);
+        menu.setSort(sort);
+        menu.setVisible(1);
+        menuMapper.insert(menu);
+        log.info("初始化菜单 {}", path);
     }
 
     private void seedRoles() {
@@ -79,7 +118,8 @@ public class DataSeeder implements ApplicationRunner {
                 "users:view", "users:add", "users:edit", "users:delete",
                 "roles:view", "roles:add", "roles:edit", "roles:delete",
                 "settings:view", "settings:edit", "logs:view",
-                "notice:view", "notice:edit"));
+                "notice:view", "notice:edit",
+                "dict:view", "dict:edit"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(

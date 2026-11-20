@@ -104,3 +104,41 @@ CREATE TABLE IF NOT EXISTS sys_notice_read (
     UNIQUE KEY uk_notice_user (notice_id, user_id),
     KEY idx_user_id (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='公告已读记录表';
+
+CREATE TABLE IF NOT EXISTS sys_dict_type (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    name        VARCHAR(50)  NOT NULL COMMENT '字典名称',
+    code        VARCHAR(50)  NOT NULL COMMENT '字典编码，业务代码引用',
+    remark      VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dict_code (code)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='字典类型表';
+
+CREATE TABLE IF NOT EXISTS sys_dict_item (
+    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    type_id     BIGINT      NOT NULL COMMENT '字典类型ID',
+    label       VARCHAR(50) NOT NULL COMMENT '展示标签',
+    value       VARCHAR(50) NOT NULL COMMENT '存储值',
+    sort        INT         NOT NULL DEFAULT 0 COMMENT '排序，越小越靠前',
+    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_type_value (type_id, value),
+    KEY idx_type_id (type_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='字典项表';
+
+CREATE TABLE IF NOT EXISTS sys_menu (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    title       VARCHAR(50)  NOT NULL COMMENT '菜单名称',
+    path        VARCHAR(100) NOT NULL COMMENT '前端路由路径',
+    component   VARCHAR(100) NOT NULL COMMENT '前端视图路径，如 views/users/index.vue',
+    icon        VARCHAR(50)  DEFAULT NULL COMMENT 'Element Plus 图标组件名',
+    permission  VARCHAR(50)  DEFAULT NULL COMMENT '所需权限编码，为空表示登录可见',
+    sort        INT          NOT NULL DEFAULT 0 COMMENT '排序，越小越靠前',
+    visible     TINYINT      NOT NULL DEFAULT 1 COMMENT '是否显示：1显示 0隐藏',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_menu_path (path)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='菜单表';

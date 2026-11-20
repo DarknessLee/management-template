@@ -14,37 +14,13 @@
           active-text-color="#409EFF"
           router
         >
-          <el-menu-item index="/dashboard">
-            <el-icon><component :is="icons.Odometer" /></el-icon>
-            <span>仪表盘</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('users:view')" index="/users">
-            <el-icon><component :is="icons.User" /></el-icon>
-            <span>用户管理</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('roles:view')" index="/roles">
-            <el-icon><component :is="icons.UserFilled" /></el-icon>
-            <span>角色管理</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('roles:view')" index="/permissions">
-            <el-icon><component :is="icons.Key" /></el-icon>
-            <span>权限点管理</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('logs:view')" index="/logs">
-            <el-icon><component :is="icons.Document" /></el-icon>
-            <span>操作日志</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('logs:view')" index="/login-logs">
-            <el-icon><component :is="icons.Clock" /></el-icon>
-            <span>登录日志</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('notice:view')" index="/notices">
-            <el-icon><component :is="icons.Message" /></el-icon>
-            <span>通知公告</span>
-          </el-menu-item>
-          <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
-            <el-icon><component :is="icons.Operation" /></el-icon>
-            <span>系统设置</span>
+          <el-menu-item
+            v-for="menu in menuStore.menus"
+            :key="menu.path"
+            :index="menu.path"
+          >
+            <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
+            <span>{{ menu.title }}</span>
           </el-menu-item>
         </el-menu>
       </nav>
@@ -133,6 +109,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useMenuStore } from '@/stores/menu'
 import { assetUrl } from '@/utils/asset'
 import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import { 
@@ -145,6 +122,8 @@ import {
   Clock,
   Bell,
   Message,
+  Collection,
+  Menu,
   Fold, 
   Expand, 
   ArrowDown 
@@ -153,6 +132,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const menuStore = useMenuStore()
 
 const sidebarCollapsed = ref(false)
 
@@ -171,6 +151,8 @@ const icons = {
   Clock,
   Bell,
   Message,
+  Collection,
+  Menu,
   Fold,
   Expand,
   ArrowDown
@@ -179,9 +161,6 @@ const icons = {
 const activeMenu = computed(() => route.path)
 
 const currentPageTitle = computed(() => route.meta.title || '')
-
-// 菜单项按权限显示；没有查看权限的模块连入口都不展示
-const hasPermission = (permission) => userStore.permissions.includes(permission)
 
 // 刷新页面后 pinia 状态丢失，用 token 重新拉一次用户信息
 onMounted(() => {
@@ -222,9 +201,20 @@ async function handleCommand(command) {
   }
   if (command === 'logout') {
     await userStore.logout()
+    resetDynamicRoutes()
     ElMessage.success('已退出登录')
     router.push('/login')
   }
+}
+
+// 退出时移除动态注册的路由，避免下一个登录用户还能访问上一个用户的页面
+function resetDynamicRoutes() {
+  menuStore.menus.forEach((menu) => {
+    if (router.hasRoute(menu.path)) {
+      router.removeRoute(menu.path)
+    }
+  })
+  menuStore.reset()
 }
 </script>
 

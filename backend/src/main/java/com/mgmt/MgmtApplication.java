@@ -14,7 +14,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.mgmt.module.permission.mapper",
         "com.mgmt.module.setting.mapper",
         "com.mgmt.module.log.mapper",
-        "com.mgmt.module.notice.mapper"
+        "com.mgmt.module.notice.mapper",
+        "com.mgmt.module.dict.mapper",
+        "com.mgmt.module.menu.mapper"
 })
 public class MgmtApplication {
 
