@@ -34,6 +34,10 @@
             <el-icon><component :is="icons.Document" /></el-icon>
             <span>操作日志</span>
           </el-menu-item>
+          <el-menu-item v-if="hasPermission('logs:view')" index="/login-logs">
+            <el-icon><component :is="icons.Clock" /></el-icon>
+            <span>登录日志</span>
+          </el-menu-item>
           <el-menu-item v-if="hasPermission('settings:view')" index="/settings">
             <el-icon><component :is="icons.Operation" /></el-icon>
             <span>系统设置</span>
@@ -89,6 +93,7 @@ import {
   Operation,
   Key,
   Document,
+  Clock,
   Fold, 
   Expand, 
   ArrowDown 
@@ -107,6 +112,7 @@ const icons = {
   Operation,
   Key,
   Document,
+  Clock,
   Fold,
   Expand,
   ArrowDown

@@ -1,8 +1,14 @@
 package com.mgmt.module.auth;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.mgmt.common.PageResult;
+import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +17,19 @@ import java.time.LocalDateTime;
 public class LoginLogService {
 
     private final LoginLogMapper loginLogMapper;
+
+    public PageResult<LoginLog> page(long page, long size, String username,
+                                     LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(username), LoginLog::getUsername, username)
+                .ge(startTime != null, LoginLog::getLoginTime, startTime)
+                .le(endTime != null, LoginLog::getLoginTime, endTime)
+                .orderByDesc(LoginLog::getLoginTime)
+                .orderByDesc(LoginLog::getId);
+
+        IPage<LoginLog> result = loginLogMapper.selectPage(new Page<>(page, size), wrapper);
+        return PageResult.of(result, result.getRecords());
+    }
 
     /**
      * 分批删除指定时间之前的登录日志。
