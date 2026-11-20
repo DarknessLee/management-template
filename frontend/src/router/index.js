@@ -33,6 +33,12 @@ const routes = [
         meta: { title: '角色管理', icon: 'icon-roles', permission: 'roles:view' }
       },
       {
+        path: 'permissions',
+        name: 'Permissions',
+        component: () => import('@/views/permissions/index.vue'),
+        meta: { title: '权限点管理', icon: 'icon-permissions', permission: 'roles:view' }
+      },
+      {
         path: 'logs',
         name: 'Logs',
         component: () => import('@/views/logs/index.vue'),

@@ -29,6 +29,16 @@ CREATE TABLE IF NOT EXISTS sys_role (
     UNIQUE KEY uk_code (code)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='角色表';
 
+CREATE TABLE IF NOT EXISTS sys_permission (
+    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    code        VARCHAR(50) NOT NULL COMMENT '权限编码，如 users:view',
+    name        VARCHAR(50) NOT NULL COMMENT '权限名称，如 查看用户',
+    module      VARCHAR(50) NOT NULL COMMENT '归属模块，用于授权时分组',
+    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_code (code)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='权限点定义表';
+
 CREATE TABLE IF NOT EXISTS sys_role_permission (
     role_id    BIGINT      NOT NULL COMMENT '角色ID',
     permission VARCHAR(50) NOT NULL COMMENT '权限标识，如 users:view',

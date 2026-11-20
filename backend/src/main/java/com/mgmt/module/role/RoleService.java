@@ -2,6 +2,8 @@ package com.mgmt.module.role;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
+import com.mgmt.module.permission.entity.SysPermission;
+import com.mgmt.module.permission.mapper.SysPermissionMapper;
 import com.mgmt.module.role.dto.RoleRequest;
 import com.mgmt.module.role.dto.RoleVO;
 import com.mgmt.module.role.entity.SysRole;
@@ -17,7 +19,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +27,7 @@ public class RoleService {
 
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper permissionMapper;
+    private final SysPermissionMapper permissionDefinitionMapper;
     private final SysUserMapper userMapper;
 
     public List<RoleVO> list() {
@@ -119,10 +121,20 @@ public class RoleService {
         if (permissions == null) {
             return;
         }
-        permissions.stream()
-                .filter(Objects::nonNull)
+        List<String> codes = permissions.stream()
+                .filter(StringUtils::hasText)
                 .distinct()
-                .forEach(permission -> permissionMapper.insert(new SysRolePermission(roleId, permission)));
+                .toList();
+        if (codes.isEmpty()) {
+            return;
+        }
+        // 只接受权限点目录里的编码，避免前端传错导致角色持有一条永远校验不过的权限
+        long known = permissionDefinitionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
+                .in(SysPermission::getCode, codes));
+        if (known != codes.size()) {
+            throw new BizException("存在未定义的权限编码，请先在权限点管理中维护");
+        }
+        codes.forEach(code -> permissionMapper.insert(new SysRolePermission(roleId, code)));
     }
 
     private RoleVO toVO(SysRole role, List<String> permissions) {

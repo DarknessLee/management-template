@@ -26,6 +26,10 @@
             <el-icon><component :is="icons.UserFilled" /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
+          <el-menu-item v-if="hasPermission('roles:view')" index="/permissions">
+            <el-icon><component :is="icons.Key" /></el-icon>
+            <span>权限点管理</span>
+          </el-menu-item>
           <el-menu-item v-if="hasPermission('logs:view')" index="/logs">
             <el-icon><component :is="icons.Document" /></el-icon>
             <span>操作日志</span>
@@ -83,6 +87,7 @@ import {
   User, 
   UserFilled, 
   Operation,
+  Key,
   Document,
   Fold, 
   Expand, 
@@ -100,6 +105,7 @@ const icons = {
   User,
   UserFilled,
   Operation,
+  Key,
   Document,
   Fold,
   Expand,

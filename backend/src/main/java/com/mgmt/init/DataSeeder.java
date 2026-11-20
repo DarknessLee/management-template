@@ -1,6 +1,8 @@
 package com.mgmt.init;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mgmt.module.permission.entity.SysPermission;
+import com.mgmt.module.permission.mapper.SysPermissionMapper;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.entity.SysRolePermission;
 import com.mgmt.module.role.mapper.SysRoleMapper;
@@ -32,6 +34,7 @@ public class DataSeeder implements ApplicationRunner {
 
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper permissionMapper;
+    private final SysPermissionMapper permissionDefinitionMapper;
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final SettingService settingService;
@@ -39,11 +42,27 @@ public class DataSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        // 权限点目录先于角色初始化，角色授权的可选范围依赖它
+        seedPermissions();
         seedRoles();
         seedUsers();
         // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
         ensurePermission("admin", "logs:view");
         settingService.initDefaultsIfEmpty();
+    }
+
+    private void seedPermissions() {
+        ensurePermissionDefinition("users:view", "查看用户", "用户管理");
+        ensurePermissionDefinition("users:add", "新增用户", "用户管理");
+        ensurePermissionDefinition("users:edit", "编辑用户", "用户管理");
+        ensurePermissionDefinition("users:delete", "删除用户", "用户管理");
+        ensurePermissionDefinition("roles:view", "查看角色", "角色管理");
+        ensurePermissionDefinition("roles:add", "新增角色", "角色管理");
+        ensurePermissionDefinition("roles:edit", "编辑角色", "角色管理");
+        ensurePermissionDefinition("roles:delete", "删除角色", "角色管理");
+        ensurePermissionDefinition("settings:view", "查看设置", "系统设置");
+        ensurePermissionDefinition("settings:edit", "修改设置", "系统设置");
+        ensurePermissionDefinition("logs:view", "查看日志", "操作日志");
     }
 
     private void seedRoles() {
@@ -88,6 +107,20 @@ public class DataSeeder implements ApplicationRunner {
         createUser("user4", "赵六", "user4@example.com", "13800138004", roleIds.get("viewer"), 1);
         createUser("user", "访客用户", "user@example.com", "13800138005", roleIds.get("viewer"), 1);
         log.info("初始化测试用户完成，默认密码 123456");
+    }
+
+    private void ensurePermissionDefinition(String code, String name, String module) {
+        long exists = permissionDefinitionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
+                .eq(SysPermission::getCode, code));
+        if (exists > 0) {
+            return;
+        }
+        SysPermission permission = new SysPermission();
+        permission.setCode(code);
+        permission.setName(name);
+        permission.setModule(module);
+        permissionDefinitionMapper.insert(permission);
+        log.info("初始化权限点 {}", code);
     }
 
     private void ensurePermission(String roleCode, String permission) {

@@ -60,11 +60,26 @@
           />
         </el-form-item>
         <el-form-item label="权限">
-          <el-checkbox-group v-model="roleForm.permissions">
-            <el-checkbox v-for="perm in permissionOptions" :key="perm.value" :value="perm.value">
-              {{ perm.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+          <div class="permission-groups">
+            <div v-if="permissionGroups.length === 0" class="permission-empty">
+              暂无可分配的权限点，请先到「权限点管理」维护
+            </div>
+            <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
+              <el-checkbox
+                class="permission-group-title"
+                :model-value="isGroupChecked(group)"
+                :indeterminate="isGroupIndeterminate(group)"
+                @change="(checked) => toggleGroup(group, checked)"
+              >
+                {{ group.module }}
+              </el-checkbox>
+              <el-checkbox-group v-model="roleForm.permissions">
+                <el-checkbox v-for="perm in group.items" :key="perm.code" :value="perm.code">
+                  {{ perm.name }}
+                </el-checkbox>
+              </el-checkbox-group>
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -80,6 +95,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getRolesApi, createRoleApi, updateRoleApi, deleteRoleApi } from '@/api/role'
+import { getPermissionsApi } from '@/api/permission'
 import { useUserStore } from '@/stores/user'
 
 const icons = { Plus }
@@ -113,21 +129,21 @@ const formRules = {
   ]
 }
 
-const permissionOptions = [
-  { value: 'users:view', label: '用户查看' },
-  { value: 'users:add', label: '用户新增' },
-  { value: 'users:edit', label: '用户编辑' },
-  { value: 'users:delete', label: '用户删除' },
-  { value: 'roles:view', label: '角色查看' },
-  { value: 'roles:add', label: '角色新增' },
-  { value: 'roles:edit', label: '角色编辑' },
-  { value: 'roles:delete', label: '角色删除' },
-  { value: 'settings:view', label: '设置查看' },
-  { value: 'settings:edit', label: '设置编辑' }
-]
+const permissionGroups = ref([])
+
+const permissionNameMap = computed(() => {
+  const map = {}
+  permissionGroups.value.forEach(group => {
+    group.items.forEach(item => {
+      map[item.code] = item.name
+    })
+  })
+  return map
+})
 
 onMounted(() => {
   loadRoles()
+  loadPermissions()
 })
 
 async function loadRoles() {
@@ -136,6 +152,41 @@ async function loadRoles() {
     roleList.value = res.data.list
   } catch (error) {
     // 拦截器已提示
+  }
+}
+
+// 权限点目录由后端维护，前端只负责按模块分组展示
+async function loadPermissions() {
+  try {
+    const res = await getPermissionsApi()
+    const groups = new Map()
+    res.data.forEach(item => {
+      if (!groups.has(item.module)) {
+        groups.set(item.module, [])
+      }
+      groups.get(item.module).push(item)
+    })
+    permissionGroups.value = [...groups.entries()].map(([module, items]) => ({ module, items }))
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function isGroupChecked(group) {
+  return group.items.length > 0 && group.items.every(item => roleForm.permissions.includes(item.code))
+}
+
+function isGroupIndeterminate(group) {
+  const checked = group.items.filter(item => roleForm.permissions.includes(item.code)).length
+  return checked > 0 && checked < group.items.length
+}
+
+function toggleGroup(group, checked) {
+  const codes = group.items.map(item => item.code)
+  if (checked) {
+    roleForm.permissions = [...new Set([...roleForm.permissions, ...codes])]
+  } else {
+    roleForm.permissions = roleForm.permissions.filter(code => !codes.includes(code))
   }
 }
 
@@ -210,10 +261,37 @@ async function deleteRole(row) {
 }
 
 function getPermissionName(perm) {
-  const option = permissionOptions.find(item => item.value === perm)
-  return option ? option.label : perm
+  return permissionNameMap.value[perm] || perm
 }
 </script>
 
 <style scoped>
+.permission-groups {
+  width: 100%;
+}
+
+.permission-group {
+  padding: 6px 0;
+  border-bottom: 1px dashed #EBEEF5;
+}
+
+.permission-group:last-child {
+  border-bottom: none;
+}
+
+.permission-group-title {
+  font-weight: 600;
+}
+
+.permission-group .el-checkbox-group {
+  margin-left: 24px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.permission-empty {
+  font-size: 13px;
+  color: #909399;
+}
 </style>
