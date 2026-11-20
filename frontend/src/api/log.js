@@ -7,3 +7,20 @@ export function getLogsApi(params) {
     params
   })
 }
+
+export function exportLogsApi(params) {
+  return request({
+    url: '/logs/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+export function cleanLogsApi(before) {
+  return request({
+    url: '/logs/clean',
+    method: 'delete',
+    params: { before }
+  })
+}

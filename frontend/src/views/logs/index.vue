@@ -3,7 +3,34 @@
     <div class="page-header">
       <h2 class="page-title">操作日志</h2>
       <span class="page-tip">仅记录会修改数据的操作</span>
+      <el-button @click="exportLogs">导出</el-button>
+      <el-button v-permission="'logs:clean'" type="danger" plain @click="openCleanDialog">清理日志</el-button>
     </div>
+
+    <el-dialog title="清理历史日志" v-model="cleanDialogVisible" width="460px">
+      <el-form label-width="90px">
+        <el-form-item label="清理截止">
+          <el-date-picker
+            v-model="cleanDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择日期"
+            :disabled-date="disableFutureDate"
+            style="width: 100%;"
+          />
+        </el-form-item>
+      </el-form>
+      <el-alert
+        title="将删除所选日期及之前的日志，删除后不可恢复。"
+        type="warning"
+        :closable="false"
+        show-icon
+      />
+      <template #footer>
+        <el-button @click="cleanDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="cleaning" @click="cleanLogs">确认清理</el-button>
+      </template>
+    </el-dialog>
 
     <div class="card">
       <div class="search-bar">
@@ -85,7 +112,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getLogsApi } from '@/api/log'
+import { getLogsApi, exportLogsApi, cleanLogsApi } from '@/api/log'
 
 const logList = ref([])
 const timeRange = ref([])
@@ -143,10 +170,74 @@ function handleCurrentChange(page) {
   pagination.page = page
   loadLogs()
 }
+
+const cleanDialogVisible = ref(false)
+const cleanDate = ref('')
+const cleaning = ref(false)
+
+function openCleanDialog() {
+  cleanDate.value = ''
+  cleanDialogVisible.value = true
+}
+
+function disableFutureDate(date) {
+  return date.getTime() > Date.now()
+}
+
+async function cleanLogs() {
+  if (!cleanDate.value) {
+    ElMessage.warning('请选择清理截止日期')
+    return
+  }
+
+  cleaning.value = true
+  try {
+    const res = await cleanLogsApi(`${cleanDate.value} 23:59:59`)
+    ElMessage.success(`已清理 ${res.data} 条日志`)
+    cleanDialogVisible.value = false
+    pagination.page = 1
+    loadLogs()
+  } catch (error) {
+    // 拦截器已提示
+  } finally {
+    cleaning.value = false
+  }
+}
+
+async function exportLogs() {
+  try {
+    const response = await exportLogsApi({
+      module: searchForm.module || undefined,
+      keyword: searchForm.keyword || undefined,
+      startTime: timeRange.value?.[0],
+      endTime: timeRange.value?.[1]
+    })
+    saveBlob(response, 'operation-logs.xlsx')
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function saveBlob(response, fallbackName) {
+  const disposition = response.headers['content-disposition'] || ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  const filename = match ? decodeURIComponent(match[1]) : fallbackName
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <style scoped>
+.page-header {
+  justify-content: flex-start;
+}
+
 .page-tip {
+  margin-right: auto;
   font-size: 13px;
   color: #909399;
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -54,16 +55,31 @@ public class OperationLogService {
 
     public PageResult<SysOperationLog> page(long page, long size, String module, String keyword,
                                             LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<SysOperationLog> wrapper = searchWrapper(module, keyword, startTime, endTime);
+        wrapper.orderByDesc(SysOperationLog::getId);
+
+        IPage<SysOperationLog> result = logMapper.selectPage(new Page<>(page, size), wrapper);
+        return PageResult.of(result, result.getRecords());
+    }
+
+    /**
+     * 导出用：不分页，筛选条件与列表页保持一致。
+     */
+    public List<SysOperationLog> listForExport(String module, String keyword,
+                                               LocalDateTime startTime, LocalDateTime endTime) {
+        return logMapper.selectList(searchWrapper(module, keyword, startTime, endTime)
+                .orderByDesc(SysOperationLog::getId));
+    }
+
+    private LambdaQueryWrapper<SysOperationLog> searchWrapper(String module, String keyword,
+                                                              LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<SysOperationLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(module), SysOperationLog::getModule, module)
                 .and(StringUtils.hasText(keyword), w -> w.like(SysOperationLog::getUsername, keyword)
                         .or().like(SysOperationLog::getAction, keyword)
                         .or().like(SysOperationLog::getUri, keyword))
                 .ge(startTime != null, SysOperationLog::getCreateTime, startTime)
-                .le(endTime != null, SysOperationLog::getCreateTime, endTime)
-                .orderByDesc(SysOperationLog::getId);
-
-        IPage<SysOperationLog> result = logMapper.selectPage(new Page<>(page, size), wrapper);
-        return PageResult.of(result, result.getRecords());
+                .le(endTime != null, SysOperationLog::getCreateTime, endTime);
+        return wrapper;
     }
 }

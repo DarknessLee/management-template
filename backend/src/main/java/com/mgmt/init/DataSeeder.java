@@ -58,6 +58,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "dict:edit");
         ensurePermission("admin", "monitor:view");
         ensurePermission("admin", "online:view");
+        ensurePermission("admin", "logs:clean");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -73,6 +74,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("settings:view", "查看设置", "系统设置");
         ensurePermissionDefinition("settings:edit", "修改设置", "系统设置");
         ensurePermissionDefinition("logs:view", "查看日志", "操作日志");
+        ensurePermissionDefinition("logs:clean", "清理日志", "操作日志");
         ensurePermissionDefinition("notice:view", "查看公告", "通知公告");
         ensurePermissionDefinition("notice:edit", "管理公告", "通知公告");
         ensurePermissionDefinition("dict:view", "查看字典", "数据字典");
@@ -123,7 +125,7 @@ public class DataSeeder implements ApplicationRunner {
         rolePermissions.put("admin|管理员|系统管理员，拥有所有权限", List.of(
                 "users:view", "users:add", "users:edit", "users:delete",
                 "roles:view", "roles:add", "roles:edit", "roles:delete",
-                "settings:view", "settings:edit", "logs:view",
+                "settings:view", "settings:edit", "logs:view", "logs:clean",
                 "notice:view", "notice:edit",
                 "dict:view", "dict:edit",
                 "monitor:view", "online:view"));
