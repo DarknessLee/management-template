@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +21,10 @@ public class SettingService {
 
     private final SysSettingMapper settingMapper;
     private final ObjectMapper objectMapper;
+
+    /** 登录页等未登录场景可以读取的品牌配置 */
+    private static final List<String> PUBLIC_BASIC_KEYS =
+            List.of("siteTitle", "siteLogo", "defaultTheme", "language");
 
     /**
      * 前端"重置"按钮使用的默认值，与种子数据保持一致。
@@ -59,6 +64,22 @@ public class SettingService {
             } catch (Exception e) {
                 // 单组配置损坏不影响其他组返回，降级为默认值
                 log.warn("配置 {} 解析失败，使用默认值", setting.getSettingKey(), e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 只暴露品牌相关字段，避免未登录场景读到安全配置。
+     */
+    public Map<String, Object> publicBasic() {
+        Object value = get().get("basic");
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (value instanceof Map<?, ?> basic) {
+            for (String key : PUBLIC_BASIC_KEYS) {
+                if (basic.containsKey(key)) {
+                    result.put(key, basic.get(key));
+                }
             }
         }
         return result;

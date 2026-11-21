@@ -2,8 +2,14 @@
   <div class="layout-container">
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-logo">
-        <h2 v-show="!sidebarCollapsed">后台管理</h2>
-        <span v-show="sidebarCollapsed" class="logo-icon">MG</span>
+        <img
+          v-if="siteStore.config.siteLogo"
+          :src="siteStore.config.siteLogo"
+          class="logo-image"
+          alt="logo"
+        />
+        <h2 v-show="!sidebarCollapsed">{{ siteStore.config.siteTitle }}</h2>
+        <span v-show="sidebarCollapsed" class="logo-icon">{{ logoLetter }}</span>
       </div>
       <nav class="sidebar-nav">
         <el-menu 
@@ -131,6 +137,7 @@ import { useMenuStore } from '@/stores/menu'
 import { assetUrl } from '@/utils/asset'
 import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import TagsView from './components/TagsView.vue'
+import { useSiteStore } from '@/stores/site'
 import { 
   Odometer, 
   User, 
@@ -161,6 +168,10 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const menuStore = useMenuStore()
+const siteStore = useSiteStore()
+
+// 折叠时用品牌名首字作为图标
+const logoLetter = computed(() => (siteStore.config.siteTitle || '后台').slice(0, 1))
 
 const sidebarCollapsed = ref(false)
 
@@ -301,6 +312,21 @@ function collectLeafPaths(menus, paths = []) {
   color: #fff;
   font-size: 18px;
   font-weight: 600;
+}
+
+.logo-image {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.sidebar-logo h2 {
+  max-width: 150px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .logo-icon {

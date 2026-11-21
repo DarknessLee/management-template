@@ -25,6 +25,14 @@ public class SettingController {
         return Result.ok(settingService.get());
     }
 
+    /**
+     * 登录页与侧边栏展示品牌信息，不要求登录和设置权限。
+     */
+    @GetMapping("/public")
+    public Result<Map<String, Object>> publicBasic() {
+        return Result.ok(settingService.publicBasic());
+    }
+
     @PutMapping
     @RequirePermission("settings:edit")
     @OperationLog(module = "系统设置", action = "修改设置")

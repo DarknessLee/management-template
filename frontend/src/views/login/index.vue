@@ -2,7 +2,13 @@
   <div class="login-container">
     <div class="login-wrapper">
       <div class="login-header">
-        <h1>后台管理系统</h1>
+        <img
+          v-if="siteStore.config.siteLogo"
+          :src="siteStore.config.siteLogo"
+          class="login-logo"
+          alt="logo"
+        />
+        <h1>{{ siteStore.config.siteTitle }}</h1>
         <p>欢迎登录</p>
       </div>
       <el-form ref="loginFormRef" :model="loginForm" :rules="rules" label-width="0px" class="login-form">
@@ -74,10 +80,12 @@ import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useSiteStore } from '@/stores/site'
 import { getCaptchaApi } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
+const siteStore = useSiteStore()
 
 // 局部注册图标组件，供 el-input 的 prefix-icon 使用
 const icons = { User, Lock }
@@ -108,6 +116,7 @@ const rules = {
 }
 
 onMounted(() => {
+  siteStore.load()
   loadCaptcha()
 })
 
@@ -170,6 +179,13 @@ async function handleLogin() {
 .login-header {
   text-align: center;
   margin-bottom: 30px;
+}
+
+.login-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 10px;
 }
 
 .login-header h1 {

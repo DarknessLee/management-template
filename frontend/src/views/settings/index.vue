@@ -10,7 +10,7 @@
         <div class="info-list">
           <div class="info-item">
             <span class="info-label">系统名称</span>
-            <span class="info-value">后台管理系统</span>
+            <span class="info-value">{{ basicForm.siteTitle }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">系统版本</span>
@@ -118,8 +118,10 @@
 
 <script setup>
 import { reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSettingsApi, updateSettingsApi } from '@/api/settings'
+import { useSiteStore } from '@/stores/site'
 
 // 与后端 SettingService.defaults() 保持一致
 const defaultSecurity = {
@@ -147,6 +149,9 @@ const securityForm = reactive({ ...defaultSecurity })
 const basicForm = reactive({ ...defaultBasic })
 const notificationForm = reactive({ ...defaultNotification })
 
+const route = useRoute()
+const siteStore = useSiteStore()
+
 onMounted(() => {
   loadSettings()
 })
@@ -170,6 +175,10 @@ async function saveSettings() {
       notification: { ...notificationForm }
     })
     ElMessage.success('设置已保存')
+    // 品牌名称和 Logo 立即同步到登录页、侧边栏和浏览器标题
+    await siteStore.load(true)
+    const siteTitle = basicForm.siteTitle || '后台管理系统'
+    document.title = route.meta.title ? `${route.meta.title} - ${siteTitle}` : siteTitle
   } catch (error) {
     // 拦截器已提示
   }

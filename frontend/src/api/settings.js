@@ -7,6 +7,13 @@ export function getSettingsApi() {
   })
 }
 
+export function getPublicSettingsApi() {
+  return request({
+    url: '/settings/public',
+    method: 'get'
+  })
+}
+
 export function updateSettingsApi(data) {
   return request({
     url: '/settings',

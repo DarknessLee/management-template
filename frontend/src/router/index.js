@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
+import { useSiteStore } from '@/stores/site'
 
 // 菜单表里的 component 形如 views/users/index.vue，这里建立懒加载映射
 const viewModules = import.meta.glob('../views/**/*.vue')
@@ -133,7 +134,8 @@ router.beforeEach(async (to, from, next) => {
 })
 
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title} - 后台管理系统` : '后台管理系统'
+  const siteTitle = useSiteStore().config.siteTitle || '后台管理系统'
+  document.title = to.meta.title ? `${to.meta.title} - ${siteTitle}` : siteTitle
 })
 
 export default router
