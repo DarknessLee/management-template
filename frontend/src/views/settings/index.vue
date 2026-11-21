@@ -63,6 +63,10 @@
             />
             <span style="margin-left: 8px;">次</span>
           </el-form-item>
+          <el-form-item label="页面水印">
+            <el-switch v-model="securityForm.watermark" />
+            <span class="setting-hint">开启后全站显示当前用户和日期的半透明水印</span>
+          </el-form-item>
         </el-form>
       </div>
 
@@ -128,7 +132,8 @@ const defaultSecurity = {
   loginTimeout: 30,
   passwordExpire: 90,
   lockOnFail: true,
-  maxFailCount: 5
+  maxFailCount: 5,
+  watermark: false
 }
 
 const defaultBasic = {
@@ -204,6 +209,12 @@ function resetSettings() {
   border-radius: 8px;
   padding: 24px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+}
+
+.setting-hint {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #a8abb2;
 }
 
 .setting-title {

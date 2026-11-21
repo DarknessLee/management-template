@@ -6,7 +6,8 @@ const DEFAULT_SITE = {
   siteTitle: '后台管理系统',
   siteLogo: '',
   defaultTheme: 'light',
-  language: 'zh-CN'
+  language: 'zh-CN',
+  watermark: false
 }
 
 export const useSiteStore = defineStore('site', () => {

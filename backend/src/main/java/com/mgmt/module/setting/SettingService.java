@@ -34,7 +34,8 @@ public class SettingService {
                 "loginTimeout", 30,
                 "passwordExpire", 90,
                 "lockOnFail", true,
-                "maxFailCount", 5);
+                "maxFailCount", 5,
+                "watermark", false);
         Map<String, Object> basic = Map.of(
                 "siteTitle", "后台管理系统",
                 "siteLogo", "",
@@ -60,7 +61,14 @@ public class SettingService {
                 Map<String, Object> value = objectMapper.readValue(
                         setting.getSettingJson(), new TypeReference<>() {
                         });
-                result.put(setting.getSettingKey(), value);
+                // 与默认值合并，老库保存过的分组缺少新增键时仍能读到默认配置
+                Map<String, Object> merged = new LinkedHashMap<>();
+                Object defaultValue = result.get(setting.getSettingKey());
+                if (defaultValue instanceof Map<?, ?> defaultsMap) {
+                    defaultsMap.forEach((k, v) -> merged.put(String.valueOf(k), v));
+                }
+                merged.putAll(value);
+                result.put(setting.getSettingKey(), merged);
             } catch (Exception e) {
                 // 单组配置损坏不影响其他组返回，降级为默认值
                 log.warn("配置 {} 解析失败，使用默认值", setting.getSettingKey(), e);
@@ -73,14 +81,20 @@ public class SettingService {
      * 只暴露品牌相关字段，避免未登录场景读到安全配置。
      */
     public Map<String, Object> publicBasic() {
-        Object value = get().get("basic");
+        Map<String, Object> all = get();
         Map<String, Object> result = new LinkedHashMap<>();
+        Object value = all.get("basic");
         if (value instanceof Map<?, ?> basic) {
             for (String key : PUBLIC_BASIC_KEYS) {
                 if (basic.containsKey(key)) {
                     result.put(key, basic.get(key));
                 }
             }
+        }
+        // 页面水印开关需要所有登录用户可见，但不暴露其他安全配置
+        Object security = all.get("security");
+        if (security instanceof Map<?, ?> securityMap) {
+            result.put("watermark", Boolean.TRUE.equals(securityMap.get("watermark")));
         }
         return result;
     }

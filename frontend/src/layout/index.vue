@@ -125,6 +125,8 @@
         <p class="notice-detail-content">{{ currentNotice.content }}</p>
       </div>
     </el-dialog>
+
+    <Watermark v-if="siteStore.config.watermark" :text="watermarkText" />
   </div>
 </template>
 
@@ -137,6 +139,7 @@ import { useMenuStore } from '@/stores/menu'
 import { assetUrl } from '@/utils/asset'
 import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import TagsView from './components/TagsView.vue'
+import Watermark from './components/Watermark.vue'
 import { useSiteStore } from '@/stores/site'
 import { 
   Odometer, 
@@ -172,6 +175,15 @@ const siteStore = useSiteStore()
 
 // 折叠时用品牌名首字作为图标
 const logoLetter = computed(() => (siteStore.config.siteTitle || '后台').slice(0, 1))
+
+// 水印内容带上登录人和日期，便于截图追溯
+const watermarkText = computed(() => {
+  const info = userStore.userInfo || {}
+  const name = [info.username, info.realName].filter(Boolean).join(' ')
+  const now = new Date()
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return name ? `${name} ${day}` : day
+})
 
 const sidebarCollapsed = ref(false)
 
