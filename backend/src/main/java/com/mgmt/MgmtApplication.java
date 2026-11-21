@@ -18,7 +18,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.mgmt.module.log.mapper",
         "com.mgmt.module.notice.mapper",
         "com.mgmt.module.dict.mapper",
-        "com.mgmt.module.menu.mapper"
+        "com.mgmt.module.menu.mapper",
+        "com.mgmt.module.file.mapper"
 })
 public class MgmtApplication {
 
