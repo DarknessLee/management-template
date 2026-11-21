@@ -59,6 +59,21 @@ CREATE TABLE IF NOT EXISTS sys_dept (
     KEY idx_parent_id (parent_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='部门表';
 
+CREATE TABLE IF NOT EXISTS sys_job (
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    name            VARCHAR(50)  NOT NULL COMMENT '任务名称',
+    handler_key     VARCHAR(50)  NOT NULL COMMENT '处理器标识',
+    cron_expression VARCHAR(50)  NOT NULL COMMENT 'Cron 表达式',
+    status          TINYINT      NOT NULL DEFAULT 0 COMMENT '状态：1启用 0停用',
+    remark          VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    last_run_time   DATETIME     DEFAULT NULL COMMENT '最近执行时间',
+    last_result     VARCHAR(500) DEFAULT NULL COMMENT '最近执行结果',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_handler_key (handler_key)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='定时任务表';
+
 CREATE TABLE IF NOT EXISTS sys_setting (
     setting_key  VARCHAR(50) NOT NULL COMMENT '配置分组：security/basic/notification',
     setting_json JSON        NOT NULL COMMENT '配置内容（JSON）',

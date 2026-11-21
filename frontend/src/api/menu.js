@@ -7,3 +7,33 @@ export function getCurrentMenusApi() {
     method: 'get'
   })
 }
+
+export function getMenusApi() {
+  return request({
+    url: '/menus',
+    method: 'get'
+  })
+}
+
+export function createMenuApi(data) {
+  return request({
+    url: '/menus',
+    method: 'post',
+    data
+  })
+}
+
+export function updateMenuApi(id, data) {
+  return request({
+    url: `/menus/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteMenuApi(id) {
+  return request({
+    url: `/menus/${id}`,
+    method: 'delete'
+  })
+}

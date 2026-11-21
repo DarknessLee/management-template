@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.mgmt.module.auth.mapper",
         "com.mgmt.module.user.mapper",
         "com.mgmt.module.dept.mapper",
+        "com.mgmt.module.job.mapper",
         "com.mgmt.module.role.mapper",
         "com.mgmt.module.permission.mapper",
         "com.mgmt.module.setting.mapper",

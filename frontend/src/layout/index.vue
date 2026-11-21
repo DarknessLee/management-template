@@ -127,6 +127,7 @@ import {
   Monitor,
   Connection,
   OfficeBuilding,
+  Timer,
   Fold, 
   Expand, 
   ArrowDown 
@@ -159,6 +160,7 @@ const icons = {
   Monitor,
   Connection,
   OfficeBuilding,
+  Timer,
   Fold,
   Expand,
   ArrowDown

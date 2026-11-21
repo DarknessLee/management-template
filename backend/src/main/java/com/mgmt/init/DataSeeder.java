@@ -3,6 +3,9 @@ package com.mgmt.init;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.module.dept.entity.SysDept;
 import com.mgmt.module.dept.mapper.SysDeptMapper;
+import com.mgmt.module.job.JobScheduler;
+import com.mgmt.module.job.entity.SysJob;
+import com.mgmt.module.job.mapper.SysJobMapper;
 import com.mgmt.module.permission.entity.SysPermission;
 import com.mgmt.module.permission.mapper.SysPermissionMapper;
 import com.mgmt.module.menu.entity.SysMenu;
@@ -40,6 +43,8 @@ public class DataSeeder implements ApplicationRunner {
     private final SysRolePermissionMapper permissionMapper;
     private final SysPermissionMapper permissionDefinitionMapper;
     private final SysDeptMapper deptMapper;
+    private final SysJobMapper jobMapper;
+    private final JobScheduler jobScheduler;
     private final MenuMapper menuMapper;
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -52,6 +57,7 @@ public class DataSeeder implements ApplicationRunner {
         seedPermissions();
         seedMenus();
         seedDepts();
+        seedJobs();
         seedRoles();
         seedUsers();
         // 角色可能早已初始化过，这里幂等补权限，避免老库缺新增的权限标识
@@ -65,6 +71,10 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "logs:clean");
         ensurePermission("admin", "dept:view");
         ensurePermission("admin", "dept:edit");
+        ensurePermission("admin", "job:view");
+        ensurePermission("admin", "job:edit");
+        ensurePermission("admin", "menu:view");
+        ensurePermission("admin", "menu:edit");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -89,30 +99,38 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("online:view", "查看在线用户", "在线用户");
         ensurePermissionDefinition("dept:view", "查看部门", "部门管理");
         ensurePermissionDefinition("dept:edit", "维护部门", "部门管理");
+        ensurePermissionDefinition("job:view", "查看任务", "定时任务");
+        ensurePermissionDefinition("job:edit", "维护任务", "定时任务");
+        ensurePermissionDefinition("menu:view", "查看菜单", "菜单管理");
+        ensurePermissionDefinition("menu:edit", "维护菜单", "菜单管理");
     }
 
+    /**
+     * 菜单只在首次初始化时写入，之后由菜单管理页维护，避免删除后重启又被补回。
+     */
     private void seedMenus() {
-        ensureMenu("/dashboard", "仪表盘", "views/dashboard/index.vue", "Odometer", null, 1);
-        ensureMenu("/users", "用户管理", "views/users/index.vue", "User", "users:view", 2);
-        ensureMenu("/roles", "角色管理", "views/roles/index.vue", "UserFilled", "roles:view", 3);
-        ensureMenu("/permissions", "权限点管理", "views/permissions/index.vue", "Key", "roles:view", 4);
-        ensureMenu("/logs", "操作日志", "views/logs/index.vue", "Document", "logs:view", 5);
-        ensureMenu("/login-logs", "登录日志", "views/loginLogs/index.vue", "Clock", "logs:view", 6);
-        ensureMenu("/notices", "通知公告", "views/notices/index.vue", "Message", "notice:view", 7);
-        ensureMenu("/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 8);
-        ensureMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
-        ensureMenu("/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 10);
-        ensureMenu("/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 11);
-        ensureMenu("/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 12);
-    }
-
-    private void ensureMenu(String path, String title, String component, String icon,
-                            String permission, int sort) {
-        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
-                .eq(SysMenu::getPath, path));
-        if (exists > 0) {
+        if (menuMapper.selectCount(null) > 0) {
             return;
         }
+        insertMenu("/dashboard", "仪表盘", "views/dashboard/index.vue", "Odometer", null, 1);
+        insertMenu("/users", "用户管理", "views/users/index.vue", "User", "users:view", 2);
+        insertMenu("/roles", "角色管理", "views/roles/index.vue", "UserFilled", "roles:view", 3);
+        insertMenu("/permissions", "权限点管理", "views/permissions/index.vue", "Key", "roles:view", 4);
+        insertMenu("/logs", "操作日志", "views/logs/index.vue", "Document", "logs:view", 5);
+        insertMenu("/login-logs", "登录日志", "views/loginLogs/index.vue", "Clock", "logs:view", 6);
+        insertMenu("/notices", "通知公告", "views/notices/index.vue", "Message", "notice:view", 7);
+        insertMenu("/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 8);
+        insertMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
+        insertMenu("/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 10);
+        insertMenu("/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 11);
+        insertMenu("/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 12);
+        insertMenu("/jobs", "定时任务", "views/jobs/index.vue", "Timer", "job:view", 13);
+        insertMenu("/menus", "菜单管理", "views/menus/index.vue", "Menu", "menu:view", 14);
+        log.info("初始化菜单完成");
+    }
+
+    private void insertMenu(String path, String title, String component, String icon,
+                            String permission, int sort) {
         SysMenu menu = new SysMenu();
         menu.setPath(path);
         menu.setTitle(title);
@@ -122,7 +140,29 @@ public class DataSeeder implements ApplicationRunner {
         menu.setSort(sort);
         menu.setVisible(1);
         menuMapper.insert(menu);
-        log.info("初始化菜单 {}", path);
+    }
+
+    private void seedJobs() {
+        if (jobMapper.selectCount(null) > 0) {
+            return;
+        }
+        createJob("操作日志清理", "log-clean", "0 0 3 * * ?", 1,
+                "每天 03:00 清理超过保留天数的操作日志");
+        createJob("登录日志清理", "login-log-clean", "0 30 3 * * ?", 1,
+                "每天 03:30 清理超过保留天数的登录日志");
+        log.info("初始化定时任务完成");
+    }
+
+    private void createJob(String name, String handlerKey, String cron, int status, String remark) {
+        SysJob job = new SysJob();
+        job.setName(name);
+        job.setHandlerKey(handlerKey);
+        job.setCronExpression(cron);
+        job.setStatus(status);
+        job.setRemark(remark);
+        jobMapper.insert(job);
+        // 调度器在种子数据之前启动，新建的任务需要手动注册
+        jobScheduler.reschedule(job);
     }
 
     private void seedDepts() {
@@ -159,7 +199,9 @@ public class DataSeeder implements ApplicationRunner {
                 "notice:view", "notice:edit",
                 "dict:view", "dict:edit",
                 "monitor:view", "online:view",
-                "dept:view", "dept:edit"));
+                "dept:view", "dept:edit",
+                "job:view", "job:edit",
+                "menu:view", "menu:edit"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(
