@@ -30,11 +30,12 @@
         <el-table-column prop="lastResult" label="执行结果" min-width="180" show-overflow-tooltip>
           <template #default="scope">{{ scope.row.lastResult || '—' }}</template>
         </el-table-column>
-        <el-table-column v-if="canEdit" label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="scope">
-            <el-button size="small" @click="runJob(scope.row)">执行</el-button>
-            <el-button size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteJob(scope.row)">删除</el-button>
+            <el-button v-if="canEdit" size="small" @click="runJob(scope.row)">执行</el-button>
+            <el-button size="small" @click="openLogDialog(scope.row)">记录</el-button>
+            <el-button v-if="canEdit" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+            <el-button v-if="canEdit" size="small" type="danger" @click="deleteJob(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -77,6 +78,45 @@
         <el-button type="primary" @click="saveJob">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer
+      v-model="logVisible"
+      :title="logJob ? `执行记录 - ${logJob.name}` : '执行记录'"
+      size="680px"
+    >
+      <el-table v-loading="logLoading" :data="logs" border stripe>
+        <el-table-column prop="createTime" label="执行时间" width="170" />
+        <el-table-column label="触发方式" width="90">
+          <template #default="scope">
+            <el-tag size="small" :type="scope.row.triggerType === 2 ? 'warning' : 'info'">
+              {{ scope.row.triggerType === 2 ? '手动' : '定时' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="结果" width="90">
+          <template #default="scope">
+            <el-tag size="small" :type="scope.row.status === 1 ? 'success' : 'danger'">
+              {{ scope.row.status === 1 ? '成功' : '失败' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="耗时" width="90">
+          <template #default="scope">{{ scope.row.durationMs }} ms</template>
+        </el-table-column>
+        <el-table-column prop="result" label="结果说明" min-width="220" show-overflow-tooltip>
+          <template #default="scope">{{ scope.row.result || '—' }}</template>
+        </el-table-column>
+      </el-table>
+      <div class="log-pager">
+        <el-pagination
+          v-model:current-page="logPage"
+          :page-size="logSize"
+          :total="logTotal"
+          layout="total, prev, pager, next"
+          @current-change="loadLogs"
+        />
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -90,7 +130,8 @@ import {
   createJobApi,
   updateJobApi,
   deleteJobApi,
-  runJobApi
+  runJobApi,
+  getJobLogsApi
 } from '@/api/job'
 import { useUserStore } from '@/stores/user'
 
@@ -106,6 +147,14 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增任务')
 const isEdit = ref(false)
 const jobFormRef = ref(null)
+
+const logVisible = ref(false)
+const logLoading = ref(false)
+const logJob = ref(null)
+const logs = ref([])
+const logPage = ref(1)
+const logSize = 10
+const logTotal = ref(0)
 
 const jobForm = reactive({
   id: null,
@@ -237,6 +286,31 @@ async function runJob(row) {
     // 拦截器已提示
   }
   loadJobs()
+  if (logVisible.value && logJob.value && logJob.value.id === row.id) {
+    loadLogs()
+  }
+}
+
+function openLogDialog(row) {
+  logJob.value = row
+  logPage.value = 1
+  logVisible.value = true
+  loadLogs()
+}
+
+async function loadLogs() {
+  if (!logJob.value) return
+  logLoading.value = true
+  try {
+    const res = await getJobLogsApi(logJob.value.id, { page: logPage.value, size: logSize })
+    logs.value = res.data.list
+    logTotal.value = res.data.total
+  } catch (error) {
+    logs.value = []
+    logTotal.value = 0
+  } finally {
+    logLoading.value = false
+  }
 }
 
 async function deleteJob(row) {
@@ -267,5 +341,10 @@ async function deleteJob(row) {
   margin: 4px 0 0;
   font-size: 12px;
   color: #909399;
+}
+
+.log-pager {
+  margin-top: 12px;
+  text-align: right;
 }
 </style>

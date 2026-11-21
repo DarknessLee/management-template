@@ -44,3 +44,11 @@ export function runJobApi(id) {
     method: 'post'
   })
 }
+
+export function getJobLogsApi(id, params) {
+  return request({
+    url: `/jobs/${id}/logs`,
+    method: 'get',
+    params
+  })
+}

@@ -30,6 +30,7 @@ public class JobScheduler {
 
     private final SysJobMapper jobMapper;
     private final List<JobHandler> jobHandlers;
+    private final JobLogService jobLogService;
 
     private final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
     private final Map<Long, ScheduledFuture<?>> futures = new ConcurrentHashMap<>();
@@ -90,13 +91,18 @@ public class JobScheduler {
         if (handler == null) {
             throw new BizException("任务处理器不存在：" + job.getHandlerKey());
         }
+        long start = System.currentTimeMillis();
         try {
             String result = normalize(handler.execute());
             saveLastRun(job.getId(), result);
+            jobLogService.record(job, JobLogService.TRIGGER_MANUAL, true,
+                    System.currentTimeMillis() - start, result);
             return result;
         } catch (Exception e) {
             String result = "执行失败：" + e.getMessage();
             saveLastRun(job.getId(), result);
+            jobLogService.record(job, JobLogService.TRIGGER_MANUAL, false,
+                    System.currentTimeMillis() - start, result);
             log.error("任务 {} 执行失败", job.getName(), e);
             throw new BizException(result);
         }
@@ -122,12 +128,18 @@ public class JobScheduler {
             log.warn("任务 {} 的处理器 {} 不存在，跳过执行", job.getName(), job.getHandlerKey());
             return;
         }
+        long start = System.currentTimeMillis();
         try {
             String result = normalize(handler.execute());
+            long duration = System.currentTimeMillis() - start;
             saveLastRun(jobId, result);
+            jobLogService.record(job, JobLogService.TRIGGER_SCHEDULED, true, duration, result);
             log.info("任务 {} 执行完成：{}", job.getName(), result);
         } catch (Exception e) {
-            saveLastRun(jobId, "执行失败：" + e.getMessage());
+            String result = "执行失败：" + e.getMessage();
+            saveLastRun(jobId, result);
+            jobLogService.record(job, JobLogService.TRIGGER_SCHEDULED, false,
+                    System.currentTimeMillis() - start, result);
             log.error("任务 {} 执行失败", job.getName(), e);
         }
     }

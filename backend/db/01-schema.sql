@@ -75,6 +75,21 @@ CREATE TABLE IF NOT EXISTS sys_job (
     UNIQUE KEY uk_handler_key (handler_key)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='定时任务表';
 
+CREATE TABLE IF NOT EXISTS sys_job_log (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    job_id       BIGINT       NOT NULL COMMENT '任务ID',
+    job_name     VARCHAR(50)  NOT NULL COMMENT '任务名称（冗余，任务删除后仍可追溯）',
+    handler_key  VARCHAR(50)  NOT NULL COMMENT '处理器标识',
+    trigger_type TINYINT      NOT NULL DEFAULT 1 COMMENT '触发方式：1定时 2手动',
+    status       TINYINT      NOT NULL DEFAULT 1 COMMENT '结果：1成功 0失败',
+    duration_ms  BIGINT       NOT NULL DEFAULT 0 COMMENT '耗时（毫秒）',
+    result       VARCHAR(500) DEFAULT NULL COMMENT '执行结果或失败原因',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '执行时间',
+    PRIMARY KEY (id),
+    KEY idx_job_id (job_id),
+    KEY idx_create_time (create_time)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='定时任务执行记录表';
+
 CREATE TABLE IF NOT EXISTS sys_file (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',

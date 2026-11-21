@@ -1,9 +1,11 @@
 package com.mgmt.module.job;
 
+import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.module.job.dto.JobHandlerVO;
 import com.mgmt.module.job.dto.JobRequest;
 import com.mgmt.module.job.dto.JobVO;
+import com.mgmt.module.job.entity.SysJobLog;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import java.util.List;
 public class JobController {
 
     private final JobService jobService;
+    private final JobLogService jobLogService;
 
     @GetMapping
     @RequirePermission("job:view")
@@ -66,5 +69,16 @@ public class JobController {
     @OperationLog(module = "定时任务", action = "执行任务")
     public Result<String> run(@PathVariable Long id) {
         return Result.ok(jobService.runNow(id));
+    }
+
+    /**
+     * 执行记录：按任务分页查询，定时和手动执行都会记录。
+     */
+    @GetMapping("/{id}/logs")
+    @RequirePermission("job:view")
+    public Result<PageResult<SysJobLog>> logs(@PathVariable Long id,
+                                              @RequestParam(defaultValue = "1") long page,
+                                              @RequestParam(defaultValue = "10") long size) {
+        return Result.ok(jobLogService.logs(id, page, size));
     }
 }
