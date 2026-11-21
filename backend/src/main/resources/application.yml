@@ -18,14 +18,20 @@ spring:
       port: 16382
       password: Mgmt_2026_redis
       database: 0
+  sql:
+    init:
+      # 建表脚本全部是 CREATE TABLE IF NOT EXISTS，每次启动执行一遍，
+      # 已有数据卷也能自动补上新增的表，不必删卷重建
+      mode: always
+      schema-locations: optional:file:./db/01-schema.sql
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
   servlet:
     multipart:
-      # 与业务校验保持一致；Spring 默认只有 1MB，头像稍大就会直接失败
-      max-file-size: 2MB
-      max-request-size: 3MB
+      # 文件管理允许 20MB；头像等业务仍会在各自的 Service 里做更严格的校验
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 mybatis-plus:
   configuration:

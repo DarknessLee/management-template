@@ -56,6 +56,7 @@ public class DataSeeder implements ApplicationRunner {
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedMenus();
+        ensureFileMenu();
         seedDepts();
         seedJobs();
         seedRoles();
@@ -75,6 +76,8 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "job:edit");
         ensurePermission("admin", "menu:view");
         ensurePermission("admin", "menu:edit");
+        ensurePermission("admin", "file:view");
+        ensurePermission("admin", "file:edit");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -103,6 +106,8 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("job:edit", "维护任务", "定时任务");
         ensurePermissionDefinition("menu:view", "查看菜单", "菜单管理");
         ensurePermissionDefinition("menu:edit", "维护菜单", "菜单管理");
+        ensurePermissionDefinition("file:view", "查看文件", "文件管理");
+        ensurePermissionDefinition("file:edit", "管理文件", "文件管理");
     }
 
     /**
@@ -126,7 +131,22 @@ public class DataSeeder implements ApplicationRunner {
         insertMenu("/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 12);
         insertMenu("/jobs", "定时任务", "views/jobs/index.vue", "Timer", "job:view", 13);
         insertMenu("/menus", "菜单管理", "views/menus/index.vue", "Menu", "menu:view", 14);
+        insertMenu("/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 15);
         log.info("初始化菜单完成");
+    }
+
+    /**
+     * 文件管理是后加的功能，老库菜单表已初始化过，seedMenus 不会再次执行，
+     * 这里按路径幂等补一条，保证升级后菜单直接可见。
+     */
+    private void ensureFileMenu() {
+        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, "/files"));
+        if (exists > 0) {
+            return;
+        }
+        insertMenu("/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 15);
+        log.info("补充文件管理菜单");
     }
 
     private void insertMenu(String path, String title, String component, String icon,
@@ -201,7 +221,8 @@ public class DataSeeder implements ApplicationRunner {
                 "monitor:view", "online:view",
                 "dept:view", "dept:edit",
                 "job:view", "job:edit",
-                "menu:view", "menu:edit"));
+                "menu:view", "menu:edit",
+                "file:view", "file:edit"));
         rolePermissions.put("editor|编辑|内容编辑，拥有部分权限", List.of(
                 "users:view", "users:add", "users:edit"));
         rolePermissions.put("viewer|查看者|仅拥有查看权限", List.of(

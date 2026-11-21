@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public Result<Void> handleUploadSize(MaxUploadSizeExceededException e) {
-        return Result.error(400, "上传文件不能超过 2MB");
+        return Result.error(400, "上传文件不能超过 20MB");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

@@ -128,6 +128,7 @@ import {
   Connection,
   OfficeBuilding,
   Timer,
+  FolderOpened,
   Fold, 
   Expand, 
   ArrowDown 
@@ -161,6 +162,7 @@ const icons = {
   Connection,
   OfficeBuilding,
   Timer,
+  FolderOpened,
   Fold,
   Expand,
   ArrowDown

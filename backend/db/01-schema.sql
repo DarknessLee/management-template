@@ -74,6 +74,20 @@ CREATE TABLE IF NOT EXISTS sys_job (
     UNIQUE KEY uk_handler_key (handler_key)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='定时任务表';
 
+CREATE TABLE IF NOT EXISTS sys_file (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    stored_name   VARCHAR(255) NOT NULL COMMENT '存储相对路径，如 202611/uuid.pdf',
+    url           VARCHAR(255) NOT NULL COMMENT '访问路径',
+    size          BIGINT       NOT NULL COMMENT '文件大小（字节）',
+    content_type  VARCHAR(100) DEFAULT NULL COMMENT 'MIME 类型',
+    uploader_id   BIGINT       DEFAULT NULL COMMENT '上传人ID',
+    uploader_name VARCHAR(50)  DEFAULT NULL COMMENT '上传人姓名',
+    create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+    PRIMARY KEY (id),
+    KEY idx_original_name (original_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='文件表';
+
 CREATE TABLE IF NOT EXISTS sys_setting (
     setting_key  VARCHAR(50) NOT NULL COMMENT '配置分组：security/basic/notification',
     setting_json JSON        NOT NULL COMMENT '配置内容（JSON）',
