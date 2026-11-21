@@ -173,9 +173,10 @@ CREATE TABLE IF NOT EXISTS sys_dict_item (
 
 CREATE TABLE IF NOT EXISTS sys_menu (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    parent_id   BIGINT       NOT NULL DEFAULT 0 COMMENT '上级菜单ID，0为顶级',
     title       VARCHAR(50)  NOT NULL COMMENT '菜单名称',
-    path        VARCHAR(100) NOT NULL COMMENT '前端路由路径',
-    component   VARCHAR(100) NOT NULL COMMENT '前端视图路径，如 views/users/index.vue',
+    path        VARCHAR(100) NOT NULL COMMENT '前端路由路径，目录用于菜单分组标识',
+    component   VARCHAR(100) DEFAULT NULL COMMENT '前端视图路径，如 views/users/index.vue；目录为空',
     icon        VARCHAR(50)  DEFAULT NULL COMMENT 'Element Plus 图标组件名',
     permission  VARCHAR(50)  DEFAULT NULL COMMENT '所需权限编码，为空表示登录可见',
     sort        INT          NOT NULL DEFAULT 0 COMMENT '排序，越小越靠前',
@@ -183,5 +184,6 @@ CREATE TABLE IF NOT EXISTS sys_menu (
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_menu_path (path)
+    UNIQUE KEY uk_menu_path (path),
+    KEY idx_parent_id (parent_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='菜单表';

@@ -14,14 +14,29 @@
           active-text-color="#409EFF"
           router
         >
-          <el-menu-item
-            v-for="menu in menuStore.menus"
-            :key="menu.path"
-            :index="menu.path"
-          >
-            <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
-            <span>{{ menu.title }}</span>
-          </el-menu-item>
+          <template v-for="menu in menuStore.menus" :key="menu.path">
+            <el-sub-menu
+              v-if="menu.children && menu.children.length"
+              :index="menu.path"
+            >
+              <template #title>
+                <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
+                <span>{{ menu.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in menu.children"
+                :key="child.path"
+                :index="child.path"
+              >
+                <el-icon><component :is="icons[child.icon] || icons.Menu" /></el-icon>
+                <span>{{ child.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-menu-item v-else :index="menu.path">
+              <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
+              <span>{{ menu.title }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </nav>
     </aside>
@@ -129,6 +144,10 @@ import {
   OfficeBuilding,
   Timer,
   FolderOpened,
+  Setting,
+  Tickets,
+  DataLine,
+  ChatDotRound,
   Fold, 
   Expand, 
   ArrowDown 
@@ -163,6 +182,10 @@ const icons = {
   OfficeBuilding,
   Timer,
   FolderOpened,
+  Setting,
+  Tickets,
+  DataLine,
+  ChatDotRound,
   Fold,
   Expand,
   ArrowDown
@@ -219,12 +242,24 @@ async function handleCommand(command) {
 
 // 退出时移除动态注册的路由，避免下一个登录用户还能访问上一个用户的页面
 function resetDynamicRoutes() {
-  menuStore.menus.forEach((menu) => {
-    if (router.hasRoute(menu.path)) {
-      router.removeRoute(menu.path)
+  collectLeafPaths(menuStore.menus).forEach((path) => {
+    if (router.hasRoute(path)) {
+      router.removeRoute(path)
     }
   })
   menuStore.reset()
+}
+
+// 只有叶子菜单注册了路由，目录只是侧边栏分组
+function collectLeafPaths(menus, paths = []) {
+  menus.forEach((menu) => {
+    if (menu.children && menu.children.length) {
+      collectLeafPaths(menu.children, paths)
+    } else {
+      paths.push(menu.path)
+    }
+  })
+  return paths
 }
 </script>
 

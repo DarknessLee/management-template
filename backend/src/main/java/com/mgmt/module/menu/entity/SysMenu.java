@@ -9,9 +9,11 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 侧边栏菜单：permission 为空表示登录即可见，否则需具备对应权限。
+ * component 为空表示目录（只用于分组），有值表示可访问的页面菜单。
  */
 @Data
 @TableName("sys_menu")
@@ -20,11 +22,14 @@ public class SysMenu {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    /** 上级菜单ID，0 表示顶级 */
+    private Long parentId;
+
     private String title;
 
     private String path;
 
-    /** 前端视图路径，如 views/users/index.vue */
+    /** 前端视图路径，如 views/users/index.vue；目录为空 */
     private String component;
 
     /** Element Plus 图标组件名，如 User */
@@ -36,6 +41,10 @@ public class SysMenu {
 
     /** 1 显示 0 隐藏 */
     private Integer visible;
+
+    /** 子菜单，不入库，仅用于接口返回树形结构 */
+    @TableField(exist = false)
+    private List<SysMenu> children;
 
     @TableField(fill = FieldFill.INSERT)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

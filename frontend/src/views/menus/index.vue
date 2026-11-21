@@ -9,7 +9,15 @@
     </div>
 
     <div class="card">
-      <el-table v-loading="loading" :data="menus" border stripe>
+      <el-table
+        v-loading="loading"
+        :data="menus"
+        border
+        stripe
+        row-key="id"
+        default-expand-all
+        :tree-props="{ children: 'children' }"
+      >
         <el-table-column label="菜单名称" min-width="160">
           <template #default="scope">
             <span class="menu-title">
@@ -18,8 +26,17 @@
             </span>
           </template>
         </el-table-column>
+        <el-table-column label="类型" width="90">
+          <template #default="scope">
+            <el-tag :type="scope.row.component ? 'success' : 'info'" size="small">
+              {{ scope.row.component ? '菜单' : '目录' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="path" label="路由路径" width="150" />
-        <el-table-column prop="component" label="组件路径" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="component" label="组件路径" min-width="220" show-overflow-tooltip>
+          <template #default="scope">{{ scope.row.component || '—' }}</template>
+        </el-table-column>
         <el-table-column prop="permission" label="权限标识" width="140">
           <template #default="scope">{{ scope.row.permission || '—' }}</template>
         </el-table-column>
@@ -42,19 +59,30 @@
           </template>
         </el-table-column>
       </el-table>
-      <p class="tip">菜单由数据驱动，保存后刷新页面生效；隐藏的菜单不会出现在侧边栏和路由中。</p>
+      <p class="tip">菜单最多两级：组件路径留空即为目录，用于侧边栏分组；保存后刷新页面生效。</p>
     </div>
 
     <el-dialog :title="dialogTitle" v-model="dialogVisible" width="560px">
       <el-form ref="menuFormRef" :model="menuForm" :rules="formRules" label-width="100px">
+        <el-form-item label="上级菜单">
+          <el-select v-model="menuForm.parentId" style="width: 100%;">
+            <el-option :value="0" label="顶级菜单（目录）" />
+            <el-option
+              v-for="item in parentOptions"
+              :key="item.id"
+              :label="item.title"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="菜单名称" prop="title">
           <el-input v-model="menuForm.title" placeholder="如 用户管理" />
         </el-form-item>
         <el-form-item label="路由路径" prop="path">
-          <el-input v-model="menuForm.path" placeholder="如 /users" />
+          <el-input v-model="menuForm.path" placeholder="如 /users，目录如 /system" />
         </el-form-item>
         <el-form-item label="组件路径" prop="component">
-          <el-input v-model="menuForm.component" placeholder="如 views/users/index.vue" />
+          <el-input v-model="menuForm.component" placeholder="目录留空；菜单如 views/users/index.vue" />
         </el-form-item>
         <el-form-item label="图标">
           <el-select
@@ -121,7 +149,11 @@ import {
   Monitor,
   Connection,
   OfficeBuilding,
-  Timer
+  Timer,
+  Setting,
+  Tickets,
+  DataLine,
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import {
   getMenusApi,
@@ -148,7 +180,11 @@ const icons = {
   Monitor,
   Connection,
   OfficeBuilding,
-  Timer
+  Timer,
+  Setting,
+  Tickets,
+  DataLine,
+  ChatDotRound
 }
 
 const iconOptions = Object.keys(icons).filter(name => name !== 'Plus')
@@ -166,6 +202,7 @@ const menuFormRef = ref(null)
 
 const menuForm = reactive({
   id: null,
+  parentId: 0,
   title: '',
   path: '',
   component: '',
@@ -174,6 +211,11 @@ const menuForm = reactive({
   sort: 0,
   visible: 1
 })
+
+// 只有目录可以作为上级菜单，编辑时排除自己
+const parentOptions = computed(() => menus.value.filter(
+  item => !item.component && item.id !== menuForm.id
+))
 
 const formRules = {
   title: [
@@ -188,10 +230,18 @@ const formRules = {
     }
   ],
   component: [
-    { required: true, message: '请输入组件路径', trigger: 'blur' },
     {
-      pattern: /^views\/[a-zA-Z0-9\-_/]+\.vue$/,
-      message: '格式应为 views/模块/index.vue',
+      validator: (rule, value, callback) => {
+        if (menuForm.parentId && !value) {
+          callback(new Error('子菜单必须填写组件路径'))
+          return
+        }
+        if (value && !/^views\/[a-zA-Z0-9\-_/]+\.vue$/.test(value)) {
+          callback(new Error('格式应为 views/模块/index.vue'))
+          return
+        }
+        callback()
+      },
       trigger: 'blur'
     }
   ]
@@ -228,6 +278,7 @@ function openAddDialog() {
   dialogTitle.value = '新增菜单'
   Object.assign(menuForm, {
     id: null,
+    parentId: 0,
     title: '',
     path: '',
     component: '',
@@ -244,9 +295,10 @@ function openEditDialog(row) {
   dialogTitle.value = '编辑菜单'
   Object.assign(menuForm, {
     id: row.id,
+    parentId: row.parentId || 0,
     title: row.title,
     path: row.path,
-    component: row.component,
+    component: row.component || '',
     icon: row.icon || '',
     permission: row.permission || '',
     sort: row.sort || 0,
@@ -260,6 +312,7 @@ async function saveMenu() {
   if (!valid) return
 
   const payload = {
+    parentId: menuForm.parentId,
     title: menuForm.title,
     path: menuForm.path,
     component: menuForm.component,
@@ -286,6 +339,7 @@ async function saveMenu() {
 async function toggleVisible(row, value) {
   try {
     await updateMenuApi(row.id, {
+      parentId: row.parentId || 0,
       title: row.title,
       path: row.path,
       component: row.component,

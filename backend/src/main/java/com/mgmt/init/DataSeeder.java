@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,13 +50,17 @@ public class DataSeeder implements ApplicationRunner {
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final SettingService settingService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        // 建表脚本是 CREATE TABLE IF NOT EXISTS，老库不会自动改表结构，只能在这里补
+        ensureMenuStructure();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedMenus();
+        migrateMenuGroups();
         ensureFileMenu();
         seedDepts();
         seedJobs();
@@ -112,27 +117,83 @@ public class DataSeeder implements ApplicationRunner {
 
     /**
      * 菜单只在首次初始化时写入，之后由菜单管理页维护，避免删除后重启又被补回。
+     * 仪表盘保持顶级，其余页面按业务归到目录下，侧边栏两级展示。
      */
     private void seedMenus() {
         if (menuMapper.selectCount(null) > 0) {
             return;
         }
-        insertMenu("/dashboard", "仪表盘", "views/dashboard/index.vue", "Odometer", null, 1);
-        insertMenu("/users", "用户管理", "views/users/index.vue", "User", "users:view", 2);
-        insertMenu("/roles", "角色管理", "views/roles/index.vue", "UserFilled", "roles:view", 3);
-        insertMenu("/permissions", "权限点管理", "views/permissions/index.vue", "Key", "roles:view", 4);
-        insertMenu("/logs", "操作日志", "views/logs/index.vue", "Document", "logs:view", 5);
-        insertMenu("/login-logs", "登录日志", "views/loginLogs/index.vue", "Clock", "logs:view", 6);
-        insertMenu("/notices", "通知公告", "views/notices/index.vue", "Message", "notice:view", 7);
-        insertMenu("/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 8);
-        insertMenu("/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 9);
-        insertMenu("/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 10);
-        insertMenu("/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 11);
-        insertMenu("/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 12);
-        insertMenu("/jobs", "定时任务", "views/jobs/index.vue", "Timer", "job:view", 13);
-        insertMenu("/menus", "菜单管理", "views/menus/index.vue", "Menu", "menu:view", 14);
-        insertMenu("/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 15);
+        createMenu(0L, "/dashboard", "仪表盘", "views/dashboard/index.vue", "Odometer", null, 1);
+
+        Long systemId = createMenu(0L, "/system", "系统管理", null, "Setting", null, 2).getId();
+        createMenu(systemId, "/users", "用户管理", "views/users/index.vue", "User", "users:view", 1);
+        createMenu(systemId, "/roles", "角色管理", "views/roles/index.vue", "UserFilled", "roles:view", 2);
+        createMenu(systemId, "/permissions", "权限点管理", "views/permissions/index.vue", "Key", "roles:view", 3);
+        createMenu(systemId, "/depts", "部门管理", "views/depts/index.vue", "OfficeBuilding", "dept:view", 4);
+        createMenu(systemId, "/menus", "菜单管理", "views/menus/index.vue", "Menu", "menu:view", 5);
+        createMenu(systemId, "/dicts", "数据字典", "views/dicts/index.vue", "Collection", "dict:view", 6);
+        createMenu(systemId, "/settings", "系统设置", "views/settings/index.vue", "Operation", "settings:view", 7);
+        createMenu(systemId, "/jobs", "定时任务", "views/jobs/index.vue", "Timer", "job:view", 8);
+        createMenu(systemId, "/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 9);
+
+        Long auditId = createMenu(0L, "/audit", "日志审计", null, "Tickets", null, 3).getId();
+        createMenu(auditId, "/logs", "操作日志", "views/logs/index.vue", "Document", "logs:view", 1);
+        createMenu(auditId, "/login-logs", "登录日志", "views/loginLogs/index.vue", "Clock", "logs:view", 2);
+
+        Long opsId = createMenu(0L, "/ops", "运行监控", null, "DataLine", null, 4).getId();
+        createMenu(opsId, "/monitor", "系统监控", "views/monitor/index.vue", "Monitor", "monitor:view", 1);
+        createMenu(opsId, "/online-users", "在线用户", "views/onlineUsers/index.vue", "Connection", "online:view", 2);
+
+        Long contentId = createMenu(0L, "/content", "内容管理", null, "ChatDotRound", null, 5).getId();
+        createMenu(contentId, "/notices", "通知公告", "views/notices/index.vue", "Message", "notice:view", 1);
+
         log.info("初始化菜单完成");
+    }
+
+    /**
+     * 老库菜单是平铺的，这里一次性补上分组目录并把页面菜单挂进去。
+     * 只要分组目录已存在就认为迁移过，避免覆盖后续在管理页做的调整。
+     */
+    private void migrateMenuGroups() {
+        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+                .in(SysMenu::getPath, "/system", "/audit", "/ops", "/content"));
+        if (exists > 0) {
+            return;
+        }
+        Long systemId = createMenu(0L, "/system", "系统管理", null, "Setting", null, 2).getId();
+        Long auditId = createMenu(0L, "/audit", "日志审计", null, "Tickets", null, 3).getId();
+        Long opsId = createMenu(0L, "/ops", "运行监控", null, "DataLine", null, 4).getId();
+        Long contentId = createMenu(0L, "/content", "内容管理", null, "ChatDotRound", null, 5).getId();
+
+        moveToGroup("/users", systemId, 1);
+        moveToGroup("/roles", systemId, 2);
+        moveToGroup("/permissions", systemId, 3);
+        moveToGroup("/depts", systemId, 4);
+        moveToGroup("/menus", systemId, 5);
+        moveToGroup("/dicts", systemId, 6);
+        moveToGroup("/settings", systemId, 7);
+        moveToGroup("/jobs", systemId, 8);
+        moveToGroup("/files", systemId, 9);
+
+        moveToGroup("/logs", auditId, 1);
+        moveToGroup("/login-logs", auditId, 2);
+
+        moveToGroup("/monitor", opsId, 1);
+        moveToGroup("/online-users", opsId, 2);
+
+        moveToGroup("/notices", contentId, 1);
+        log.info("菜单分组迁移完成");
+    }
+
+    private void moveToGroup(String path, Long parentId, int sort) {
+        SysMenu menu = menuMapper.selectOne(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, path));
+        if (menu == null) {
+            return;
+        }
+        menu.setParentId(parentId);
+        menu.setSort(sort);
+        menuMapper.updateById(menu);
     }
 
     /**
@@ -145,13 +206,40 @@ public class DataSeeder implements ApplicationRunner {
         if (exists > 0) {
             return;
         }
-        insertMenu("/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 15);
+        SysMenu group = menuMapper.selectOne(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, "/system"));
+        Long parentId = group == null ? 0L : group.getId();
+        createMenu(parentId, "/files", "文件管理", "views/files/index.vue", "FolderOpened", "file:view", 9);
         log.info("补充文件管理菜单");
     }
 
-    private void insertMenu(String path, String title, String component, String icon,
-                            String permission, int sort) {
+    private void ensureMenuStructure() {
+        Integer columnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_menu' AND column_name = 'parent_id'",
+                Integer.class);
+        if (columnCount == null || columnCount == 0) {
+            jdbcTemplate.execute("ALTER TABLE sys_menu ADD COLUMN parent_id BIGINT NOT NULL DEFAULT 0 "
+                    + "COMMENT '上级菜单ID，0为顶级' AFTER id, ADD KEY idx_parent_id (parent_id)");
+            log.info("菜单表补充 parent_id 字段");
+        }
+        // 目录没有组件路径，老库的 component 是 NOT NULL，需要放开约束
+        Integer notNullCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_menu' "
+                        + "AND column_name = 'component' AND IS_NULLABLE = 'NO'",
+                Integer.class);
+        if (notNullCount != null && notNullCount > 0) {
+            jdbcTemplate.execute("ALTER TABLE sys_menu MODIFY COLUMN component VARCHAR(100) DEFAULT NULL "
+                    + "COMMENT '前端视图路径，如 views/users/index.vue；目录为空'");
+            log.info("菜单表放开 component 非空限制");
+        }
+    }
+
+    private SysMenu createMenu(Long parentId, String path, String title, String component, String icon,
+                               String permission, int sort) {
         SysMenu menu = new SysMenu();
+        menu.setParentId(parentId);
         menu.setPath(path);
         menu.setTitle(title);
         menu.setComponent(component);
@@ -160,6 +248,7 @@ public class DataSeeder implements ApplicationRunner {
         menu.setSort(sort);
         menu.setVisible(1);
         menuMapper.insert(menu);
+        return menu;
     }
 
     private void seedJobs() {

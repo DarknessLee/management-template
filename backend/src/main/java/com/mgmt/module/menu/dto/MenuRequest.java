@@ -5,6 +5,9 @@ import lombok.Data;
 @Data
 public class MenuRequest {
 
+    /** 上级菜单ID，0 或空表示顶级 */
+    private Long parentId;
+
     private String title;
 
     private String path;

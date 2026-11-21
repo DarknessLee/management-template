@@ -41,10 +41,11 @@ const router = createRouter({
 
 /**
  * 把后端菜单注册成 Layout 的子路由。
+ * 目录只是分组没有 component，只有叶子菜单需要注册路由；
  * 仪表盘已有静态路由，跳过避免重复注册。
  */
 function registerMenuRoutes(menus) {
-  menus.forEach((menu) => {
+  collectLeaves(menus).forEach((menu) => {
     if (menu.path === '/dashboard' || router.hasRoute(menu.path)) {
       return
     }
@@ -64,6 +65,17 @@ function registerMenuRoutes(menus) {
       }
     })
   })
+}
+
+function collectLeaves(menus, leaves = []) {
+  menus.forEach((menu) => {
+    if (menu.children && menu.children.length) {
+      collectLeaves(menu.children, leaves)
+    } else {
+      leaves.push(menu)
+    }
+  })
+  return leaves
 }
 
 router.beforeEach(async (to, from, next) => {
