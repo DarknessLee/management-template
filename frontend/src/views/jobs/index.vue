@@ -19,6 +19,10 @@
               :model-value="scope.row.status"
               :active-value="1"
               :inactive-value="0"
+              inline-prompt
+              :width="56"
+              :active-text="dictLabel(jobStatusOptions, 1)"
+              :inactive-text="dictLabel(jobStatusOptions, 0)"
               :disabled="!canEdit"
               @change="value => toggleStatus(scope.row, value)"
             />
@@ -134,11 +138,16 @@ import {
   getJobLogsApi
 } from '@/api/job'
 import { useUserStore } from '@/stores/user'
+import { useDictOptions, dictLabel } from '@/utils/dict'
 
 const icons = { Plus }
 
 const userStore = useUserStore()
 const canEdit = computed(() => userStore.permissions.includes('job:edit'))
+
+// 任务状态由数据字典驱动，可在「数据字典」页维护
+const jobStatusOptions = useDictOptions('job_status',
+  [{ label: '启用', value: 1 }, { label: '停用', value: 0 }], Number)
 
 const jobs = ref([])
 const handlers = ref([])

@@ -32,6 +32,29 @@ export function updateNoticeStatusApi(id, status) {
   })
 }
 
+export function updateNoticePinnedApi(id, pinned) {
+  return request({
+    url: `/notices/${id}/pin`,
+    method: 'put',
+    params: { pinned }
+  })
+}
+
+export function getNoticeReadStatsApi(id) {
+  return request({
+    url: `/notices/${id}/read-stats`,
+    method: 'get'
+  })
+}
+
+export function getNoticeReadsApi(id, params) {
+  return request({
+    url: `/notices/${id}/reads`,
+    method: 'get',
+    params
+  })
+}
+
 export function deleteNoticeApi(id) {
   return request({
     url: `/notices/${id}`,

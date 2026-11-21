@@ -3,6 +3,8 @@ package com.mgmt.module.notice;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.notice.dto.NoticeReadStatsVO;
+import com.mgmt.module.notice.dto.NoticeReadVO;
 import com.mgmt.module.notice.dto.NoticeRequest;
 import com.mgmt.module.notice.entity.SysNotice;
 import com.mgmt.security.OperationLog;
@@ -55,6 +57,27 @@ public class NoticeController {
     @OperationLog(module = "通知公告", action = "发布/下线公告")
     public Result<SysNotice> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         return Result.ok(noticeService.updateStatus(id, status));
+    }
+
+    @PutMapping("/{id}/pin")
+    @RequirePermission("notice:edit")
+    @OperationLog(module = "通知公告", action = "置顶/取消置顶公告")
+    public Result<SysNotice> updatePinned(@PathVariable Long id, @RequestParam Integer pinned) {
+        return Result.ok(noticeService.updatePinned(id, pinned));
+    }
+
+    @GetMapping("/{id}/read-stats")
+    @RequirePermission("notice:view")
+    public Result<NoticeReadStatsVO> readStats(@PathVariable Long id) {
+        return Result.ok(noticeService.readStats(id));
+    }
+
+    @GetMapping("/{id}/reads")
+    @RequirePermission("notice:view")
+    public Result<PageResult<NoticeReadVO>> reads(@PathVariable Long id,
+                                                  @RequestParam(defaultValue = "1") long page,
+                                                  @RequestParam(defaultValue = "10") long size) {
+        return Result.ok(noticeService.reads(id, page, size));
     }
 
     @DeleteMapping("/{id}")

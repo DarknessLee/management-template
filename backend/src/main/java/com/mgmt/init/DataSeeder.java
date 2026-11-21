@@ -3,6 +3,10 @@ package com.mgmt.init;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.module.dept.entity.SysDept;
 import com.mgmt.module.dept.mapper.SysDeptMapper;
+import com.mgmt.module.dict.entity.SysDictItem;
+import com.mgmt.module.dict.entity.SysDictType;
+import com.mgmt.module.dict.mapper.DictItemMapper;
+import com.mgmt.module.dict.mapper.DictTypeMapper;
 import com.mgmt.module.job.JobScheduler;
 import com.mgmt.module.job.entity.SysJob;
 import com.mgmt.module.job.mapper.SysJobMapper;
@@ -46,6 +50,8 @@ public class DataSeeder implements ApplicationRunner {
     private final SysDeptMapper deptMapper;
     private final SysJobMapper jobMapper;
     private final JobScheduler jobScheduler;
+    private final DictTypeMapper dictTypeMapper;
+    private final DictItemMapper dictItemMapper;
     private final MenuMapper menuMapper;
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -58,8 +64,10 @@ public class DataSeeder implements ApplicationRunner {
         // 建表脚本是 CREATE TABLE IF NOT EXISTS，老库不会自动改表结构，只能在这里补
         ensureMenuStructure();
         ensureRoleDataScope();
+        ensureNoticePinned();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
+        seedDicts();
         seedMenus();
         migrateMenuGroups();
         ensureFileMenu();
@@ -250,6 +258,19 @@ public class DataSeeder implements ApplicationRunner {
         log.info("角色表补充 data_scope 字段");
     }
 
+    private void ensureNoticePinned() {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_notice' AND column_name = 'pinned'",
+                Integer.class);
+        if (count != null && count > 0) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE sys_notice ADD COLUMN pinned TINYINT NOT NULL DEFAULT 0 "
+                + "COMMENT '是否置顶：1是 0否' AFTER status");
+        log.info("公告表补充 pinned 字段");
+    }
+
     private SysMenu createMenu(Long parentId, String path, String title, String component, String icon,
                                String permission, int sort) {
         SysMenu menu = new SysMenu();
@@ -263,6 +284,41 @@ public class DataSeeder implements ApplicationRunner {
         menu.setVisible(1);
         menuMapper.insert(menu);
         return menu;
+    }
+
+    /**
+     * 业务下拉框使用的字典：只在编码不存在时插入，避免覆盖管理员后续维护的内容。
+     */
+    private void seedDicts() {
+        ensureDictType("user_status", "用户状态",
+                new String[]{"启用", "1"}, new String[]{"禁用", "0"});
+        ensureDictType("notice_status", "公告状态",
+                new String[]{"已发布", "1"}, new String[]{"已下线", "0"});
+        ensureDictType("job_status", "任务状态",
+                new String[]{"启用", "1"}, new String[]{"停用", "0"});
+    }
+
+    private void ensureDictType(String code, String name, String[]... items) {
+        long exists = dictTypeMapper.selectCount(new LambdaQueryWrapper<SysDictType>()
+                .eq(SysDictType::getCode, code));
+        if (exists > 0) {
+            return;
+        }
+        SysDictType type = new SysDictType();
+        type.setCode(code);
+        type.setName(name);
+        dictTypeMapper.insert(type);
+
+        int sort = 1;
+        for (String[] item : items) {
+            SysDictItem dictItem = new SysDictItem();
+            dictItem.setTypeId(type.getId());
+            dictItem.setLabel(item[0]);
+            dictItem.setValue(item[1]);
+            dictItem.setSort(sort++);
+            dictItemMapper.insert(dictItem);
+        }
+        log.info("初始化字典 {}", code);
     }
 
     private void seedJobs() {

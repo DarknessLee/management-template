@@ -43,6 +43,10 @@
           <template #default="scope">
             <el-switch 
               :model-value="scope.row.status === 1" 
+              inline-prompt
+              :width="52"
+              :active-text="dictLabel(userStatusOptions, 1)"
+              :inactive-text="dictLabel(userStatusOptions, 0)"
               :disabled="!canEdit"
               @change="toggleStatus(scope.row)"
             />
@@ -193,10 +197,14 @@ import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserAp
 import { getRolesApi } from '@/api/role'
 import { getDeptOptionsApi } from '@/api/dept'
 import { useUserStore } from '@/stores/user'
+import { useDictOptions, dictLabel } from '@/utils/dict'
 
 const icons = { Plus, Search }
 
 const userStore = useUserStore()
+// 用户状态由数据字典驱动，可在「数据字典」页维护
+const userStatusOptions = useDictOptions('user_status',
+  [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }], Number)
 // 没有任何操作权限时整列隐藏，避免留下一列空白按钮
 const canEdit = computed(() => userStore.permissions.includes('users:edit'))
 const canOperate = computed(() => canEdit.value || userStore.permissions.includes('users:delete'))

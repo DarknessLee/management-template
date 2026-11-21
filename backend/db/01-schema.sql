@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS sys_notice (
     title        VARCHAR(100) NOT NULL COMMENT '公告标题',
     content      TEXT         NOT NULL COMMENT '公告内容',
     status       TINYINT      NOT NULL DEFAULT 0 COMMENT '状态：1已发布 0已下线',
+    pinned       TINYINT      NOT NULL DEFAULT 0 COMMENT '是否置顶：1是 0否',
     publish_time DATETIME     DEFAULT NULL COMMENT '最近一次发布时间',
     create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

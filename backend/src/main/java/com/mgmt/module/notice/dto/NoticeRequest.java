@@ -8,4 +8,6 @@ public class NoticeRequest {
     private String title;
 
     private String content;
+
+    private Integer pinned;
 }

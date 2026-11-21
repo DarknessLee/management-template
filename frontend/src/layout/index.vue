@@ -105,8 +105,11 @@
           </el-dropdown>
         </div>
       </header>
+      <TagsView @refresh="refreshView" />
       <div class="content-wrapper">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <component :is="Component" :key="viewKey" />
+        </router-view>
       </div>
     </main>
 
@@ -127,6 +130,7 @@ import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
 import { assetUrl } from '@/utils/asset'
 import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
+import TagsView from './components/TagsView.vue'
 import { 
   Odometer, 
   User, 
@@ -159,6 +163,13 @@ const userStore = useUserStore()
 const menuStore = useMenuStore()
 
 const sidebarCollapsed = ref(false)
+
+// 标签页“刷新当前”通过更换 key 强制重建页面组件
+const viewKey = ref(0)
+
+function refreshView() {
+  viewKey.value += 1
+}
 
 const unreadNotices = ref([])
 const noticePopoverVisible = ref(false)

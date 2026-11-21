@@ -5,11 +5,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.notice.dto.NoticeReadStatsVO;
+import com.mgmt.module.notice.dto.NoticeReadVO;
 import com.mgmt.module.notice.dto.NoticeRequest;
 import com.mgmt.module.notice.entity.SysNotice;
 import com.mgmt.module.notice.entity.SysNoticeRead;
 import com.mgmt.module.notice.mapper.SysNoticeMapper;
 import com.mgmt.module.notice.mapper.SysNoticeReadMapper;
+import com.mgmt.module.user.entity.SysUser;
+import com.mgmt.module.user.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +21,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -29,18 +35,23 @@ public class NoticeService {
 
     private static final int STATUS_OFFLINE = 0;
     private static final int STATUS_PUBLISHED = 1;
+    private static final int PINNED = 1;
+    private static final int UNPINNED = 0;
 
     private final SysNoticeMapper noticeMapper;
     private final SysNoticeReadMapper readMapper;
+    private final SysUserMapper userMapper;
 
     public PageResult<SysNotice> page(long page, long size, String keyword, Integer status) {
         LambdaQueryWrapper<SysNotice> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(keyword), SysNotice::getTitle, keyword)
                 .eq(status != null, SysNotice::getStatus, status)
+                .orderByDesc(SysNotice::getPinned)
                 .orderByDesc(SysNotice::getCreateTime)
                 .orderByDesc(SysNotice::getId);
 
         IPage<SysNotice> result = noticeMapper.selectPage(new Page<>(page, size), wrapper);
+        attachReadCount(result.getRecords());
         return PageResult.of(result, result.getRecords());
     }
 
@@ -49,6 +60,7 @@ public class NoticeService {
         SysNotice notice = new SysNotice();
         notice.setTitle(request.getTitle().trim());
         notice.setContent(request.getContent().trim());
+        notice.setPinned(normalizePinned(request.getPinned()));
         // 新建先保持下线状态，由管理员确认后再发布
         notice.setStatus(STATUS_OFFLINE);
         noticeMapper.insert(notice);
@@ -60,6 +72,20 @@ public class NoticeService {
         validate(request);
         notice.setTitle(request.getTitle().trim());
         notice.setContent(request.getContent().trim());
+        notice.setPinned(normalizePinned(request.getPinned()));
+        noticeMapper.updateById(notice);
+        return notice;
+    }
+
+    /**
+     * 置顶/取消置顶，置顶公告在列表和未读提醒中优先展示。
+     */
+    public SysNotice updatePinned(Long id, Integer pinned) {
+        if (pinned == null || (pinned != PINNED && pinned != UNPINNED)) {
+            throw new BizException("置顶状态不正确");
+        }
+        SysNotice notice = requireNotice(id);
+        notice.setPinned(pinned);
         noticeMapper.updateById(notice);
         return notice;
     }
@@ -94,6 +120,7 @@ public class NoticeService {
     public List<SysNotice> unread(Long userId) {
         List<SysNotice> published = noticeMapper.selectList(new LambdaQueryWrapper<SysNotice>()
                 .eq(SysNotice::getStatus, STATUS_PUBLISHED)
+                .orderByDesc(SysNotice::getPinned)
                 .orderByDesc(SysNotice::getPublishTime)
                 .orderByDesc(SysNotice::getId));
         if (published.isEmpty()) {
@@ -128,6 +155,67 @@ public class NoticeService {
         record.setUserId(userId);
         record.setReadTime(LocalDateTime.now());
         readMapper.insert(record);
+    }
+
+    /**
+     * 已读明细：分页返回阅读人，用户已删除时保留占位。
+     */
+    public PageResult<NoticeReadVO> reads(Long noticeId, long page, long size) {
+        requireNotice(noticeId);
+        IPage<SysNoticeRead> result = readMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<SysNoticeRead>()
+                        .eq(SysNoticeRead::getNoticeId, noticeId)
+                        .orderByDesc(SysNoticeRead::getReadTime));
+
+        List<SysNoticeRead> records = result.getRecords();
+        Map<Long, SysUser> users = records.isEmpty() ? Map.of()
+                : userMapper.selectBatchIds(records.stream().map(SysNoticeRead::getUserId).toList())
+                        .stream()
+                        .collect(Collectors.toMap(SysUser::getId, Function.identity()));
+
+        List<NoticeReadVO> list = records.stream().map(read -> {
+            NoticeReadVO vo = new NoticeReadVO();
+            vo.setUserId(read.getUserId());
+            SysUser user = users.get(read.getUserId());
+            vo.setUsername(user == null ? "已删除用户" : user.getUsername());
+            vo.setRealName(user == null ? "—" : user.getRealName());
+            vo.setReadTime(read.getReadTime());
+            return vo;
+        }).toList();
+        return PageResult.of(result, list);
+    }
+
+    public NoticeReadStatsVO readStats(Long noticeId) {
+        requireNotice(noticeId);
+        long readCount = readMapper.selectCount(new LambdaQueryWrapper<SysNoticeRead>()
+                .eq(SysNoticeRead::getNoticeId, noticeId));
+        long totalUsers = userMapper.selectCount(null);
+        NoticeReadStatsVO stats = new NoticeReadStatsVO();
+        stats.setNoticeId(noticeId);
+        stats.setReadCount(readCount);
+        stats.setTotalUsers(totalUsers);
+        stats.setUnreadCount(Math.max(0, totalUsers - readCount));
+        return stats;
+    }
+
+    /**
+     * 列表页一次性补齐每条公告的已读人数，避免逐条查询。
+     */
+    private void attachReadCount(List<SysNotice> notices) {
+        if (notices.isEmpty()) {
+            return;
+        }
+        List<Long> ids = notices.stream().map(SysNotice::getId).toList();
+        List<SysNoticeRead> reads = readMapper.selectList(new LambdaQueryWrapper<SysNoticeRead>()
+                .in(SysNoticeRead::getNoticeId, ids)
+                .select(SysNoticeRead::getNoticeId));
+        Map<Long, Long> counts = reads.stream()
+                .collect(Collectors.groupingBy(SysNoticeRead::getNoticeId, Collectors.counting()));
+        notices.forEach(notice -> notice.setReadCount(counts.getOrDefault(notice.getId(), 0L)));
+    }
+
+    private Integer normalizePinned(Integer pinned) {
+        return pinned != null && pinned == PINNED ? PINNED : UNPINNED;
     }
 
     private void validate(NoticeRequest request) {

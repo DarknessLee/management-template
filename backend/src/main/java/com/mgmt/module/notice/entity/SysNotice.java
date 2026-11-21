@@ -26,6 +26,13 @@ public class SysNotice {
 
     private Integer status;
 
+    /** 是否置顶：1是 0否 */
+    private Integer pinned;
+
+    /** 已读人数，仅列表展示用 */
+    @TableField(exist = false)
+    private Long readCount;
+
     /** 最近一次发布时间，下线后保留，便于追溯 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishTime;
