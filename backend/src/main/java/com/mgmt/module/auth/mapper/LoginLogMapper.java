@@ -7,11 +7,25 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 public interface LoginLogMapper extends BaseMapper<LoginLog> {
 
     @Select("SELECT COUNT(*) FROM login_log WHERE DATE(login_time) = CURDATE()")
     long countTodayLogin();
+
+    /**
+     * 近 7 天每日登录次数，用于仪表盘趋势图。
+     */
+    @Select("""
+            SELECT DATE(login_time) AS day, COUNT(*) AS cnt
+            FROM login_log
+            WHERE login_time >= #{start}
+            GROUP BY DATE(login_time)
+            ORDER BY day
+            """)
+    List<Map<String, Object>> countLoginByDay(@Param("start") LocalDateTime start);
 
     /**
      * 近 7 天已正常退出会话的平均在线分钟数，没有数据时返回 null。
