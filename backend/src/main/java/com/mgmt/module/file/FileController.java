@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @RestController
 @RequestMapping("/files")
@@ -33,8 +35,9 @@ public class FileController {
     @RequirePermission("file:view")
     public Result<PageResult<FileVO>> page(@RequestParam(defaultValue = "1") long page,
                                            @RequestParam(defaultValue = "10") long size,
-                                           @RequestParam(required = false) String keyword) {
-        return Result.ok(fileService.page(page, size, keyword));
+                                           @RequestParam(required = false) String keyword,
+                                           @RequestParam(required = false) String type) {
+        return Result.ok(fileService.page(page, size, keyword, type));
     }
 
     @PostMapping
@@ -58,6 +61,31 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .contentType(mediaTypeOf(download.contentType()))
                 .body(download.content());
+    }
+
+    /**
+     * 在线预览：与下载使用同一份文件内容，但 Content-Disposition 为 inline，
+     * 浏览器可直接渲染图片或 PDF。
+     */
+    @GetMapping("/{id}/preview")
+    @RequirePermission("file:view")
+    public ResponseEntity<byte[]> preview(@PathVariable Long id) {
+        FileService.FileDownload download = fileService.download(id);
+        ContentDisposition disposition = ContentDisposition.inline()
+                .filename(download.filename(), StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(mediaTypeOf(download.contentType()))
+                .body(download.content());
+    }
+
+    @DeleteMapping("/batch")
+    @RequirePermission("file:edit")
+    @OperationLog(module = "文件管理", action = "批量删除文件")
+    public Result<Void> deleteBatch(@RequestBody List<Long> ids) {
+        fileService.deleteBatch(ids);
+        return Result.ok();
     }
 
     @DeleteMapping("/{id}")

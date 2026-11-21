@@ -25,6 +25,22 @@ export function deleteFileApi(id) {
   })
 }
 
+export function deleteFilesApi(ids) {
+  return request({
+    url: '/files/batch',
+    method: 'delete',
+    data: ids
+  })
+}
+
+export function previewFileApi(id) {
+  return request({
+    url: `/files/${id}/preview`,
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
 export function downloadFileApi(id) {
   return request({
     url: `/files/${id}/download`,

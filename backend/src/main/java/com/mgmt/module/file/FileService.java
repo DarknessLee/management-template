@@ -23,6 +23,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -49,17 +52,26 @@ public class FileService {
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
             "txt", "md", "csv", "zip", "rar", "7z");
 
+    /** 列表筛选使用的文件分类 */
+    private static final Map<String, List<String>> TYPE_EXTENSIONS = Map.of(
+            "image", List.of("png", "jpg", "jpeg", "gif", "webp", "bmp"),
+            "pdf", List.of("pdf"),
+            "office", List.of("doc", "docx", "xls", "xlsx", "ppt", "pptx"),
+            "text", List.of("txt", "md", "csv"),
+            "archive", List.of("zip", "rar", "7z"));
+
     private final SysFileMapper fileMapper;
     private final SysUserMapper userMapper;
 
     @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
 
-    public PageResult<FileVO> page(long page, long size, String keyword) {
+    public PageResult<FileVO> page(long page, long size, String keyword, String type) {
         LambdaQueryWrapper<SysFile> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             wrapper.like(SysFile::getOriginalName, keyword.trim());
         }
+        applyTypeFilter(wrapper, type);
         wrapper.orderByDesc(SysFile::getId);
 
         IPage<SysFile> result = fileMapper.selectPage(new Page<>(page, size), wrapper);
@@ -119,14 +131,49 @@ public class FileService {
     }
 
     public void delete(Long id) {
-        SysFile file = requireFile(id);
-        fileMapper.deleteById(id);
+        remove(requireFile(id));
+    }
+
+    public void deleteBatch(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BizException(400, "请选择要删除的文件");
+        }
+        // 已被其他管理员删除的记录直接跳过，不让整批操作失败
+        ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(fileMapper::selectById)
+                .filter(Objects::nonNull)
+                .forEach(this::remove);
+    }
+
+    private void remove(SysFile file) {
+        fileMapper.deleteById(file.getId());
         try {
             // 物理文件删除失败不影响记录删除，最多留下一个孤儿文件
             Files.deleteIfExists(resolveStoredPath(file.getStoredName()));
         } catch (IOException ignored) {
             // ignored
         }
+    }
+
+    private void applyTypeFilter(LambdaQueryWrapper<SysFile> wrapper, String type) {
+        if (!StringUtils.hasText(type)) {
+            return;
+        }
+        List<String> extensions = TYPE_EXTENSIONS.get(type.trim());
+        if (extensions == null) {
+            return;
+        }
+        wrapper.and(condition -> {
+            for (int i = 0; i < extensions.size(); i++) {
+                if (i == 0) {
+                    condition.like(SysFile::getOriginalName, "." + extensions.get(0));
+                } else {
+                    condition.or().like(SysFile::getOriginalName, "." + extensions.get(i));
+                }
+            }
+        });
     }
 
     public record FileDownload(byte[] content, String filename, String contentType) {

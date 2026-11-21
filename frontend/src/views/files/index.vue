@@ -2,17 +2,28 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">文件管理</h2>
-      <el-upload
-        v-if="canEdit"
-        :show-file-list="false"
-        :http-request="handleUpload"
-        :accept="acceptTypes"
-      >
-        <el-button type="primary" :loading="uploading">
-          <el-icon><component :is="icons.Upload" /></el-icon>
-          上传文件
+      <div class="header-actions">
+        <el-button
+          v-if="canEdit"
+          type="danger"
+          plain
+          :disabled="!selectedIds.length"
+          @click="removeSelected"
+        >
+          批量删除{{ selectedIds.length ? ` (${selectedIds.length})` : '' }}
         </el-button>
-      </el-upload>
+        <el-upload
+          v-if="canEdit"
+          :show-file-list="false"
+          :http-request="handleUpload"
+          :accept="acceptTypes"
+        >
+          <el-button type="primary" :loading="uploading">
+            <el-icon><component :is="icons.Upload" /></el-icon>
+            上传文件
+          </el-button>
+        </el-upload>
+      </div>
     </div>
 
     <div class="card">
@@ -24,11 +35,33 @@
           class="keyword-input"
           @keyup.enter="handleSearch"
         />
+        <el-select
+          v-model="typeFilter"
+          placeholder="全部类型"
+          clearable
+          class="type-select"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="item in typeOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="resetSearch">重置</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="files" border stripe>
+      <el-table
+        v-loading="loading"
+        :data="files"
+        row-key="id"
+        border
+        stripe
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column v-if="canEdit" type="selection" width="46" />
         <el-table-column prop="originalName" label="文件名" min-width="260" show-overflow-tooltip />
         <el-table-column label="类型" width="90">
           <template #default="scope">
@@ -42,8 +75,9 @@
           <template #default="scope">{{ scope.row.uploaderName || '—' }}</template>
         </el-table-column>
         <el-table-column prop="createTime" label="上传时间" width="180" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="scope">
+            <el-button v-if="canPreview(scope.row)" size="small" @click="previewFile(scope.row)">预览</el-button>
             <el-button size="small" @click="downloadFile(scope.row)">下载</el-button>
             <el-button
               v-if="canEdit"
@@ -71,6 +105,26 @@
 
       <p class="tip">支持图片、PDF、Office 文档、文本和压缩包，单个文件不超过 20MB。</p>
     </div>
+
+    <el-dialog
+      v-model="previewVisible"
+      :title="previewName"
+      width="820px"
+      @closed="closePreview"
+    >
+      <img
+        v-if="previewKind === 'image'"
+        :src="previewUrl"
+        class="preview-image"
+        alt="文件预览"
+      />
+      <iframe
+        v-else
+        :src="previewUrl"
+        class="preview-frame"
+        title="PDF 预览"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -78,7 +132,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import { getFilesApi, uploadFileApi, deleteFileApi, downloadFileApi } from '@/api/file'
+import { getFilesApi, uploadFileApi, deleteFileApi, deleteFilesApi, downloadFileApi, previewFileApi } from '@/api/file'
 import { useUserStore } from '@/stores/user'
 
 const icons = { Upload }
@@ -88,10 +142,26 @@ const acceptTypes = '.png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.doc,.docx,.xls,.xlsx,
 const userStore = useUserStore()
 const canEdit = computed(() => userStore.permissions.includes('file:edit'))
 
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
+
+const typeOptions = [
+  { label: '图片', value: 'image' },
+  { label: 'PDF', value: 'pdf' },
+  { label: 'Office', value: 'office' },
+  { label: '文本', value: 'text' },
+  { label: '压缩包', value: 'archive' }
+]
+
 const files = ref([])
 const keyword = ref('')
+const typeFilter = ref('')
+const selectedIds = ref([])
 const loading = ref(false)
 const uploading = ref(false)
+const previewVisible = ref(false)
+const previewUrl = ref('')
+const previewName = ref('')
+const previewKind = ref('image')
 const pagination = reactive({
   page: 1,
   size: 10,
@@ -108,7 +178,8 @@ async function loadFiles() {
     const res = await getFilesApi({
       page: pagination.page,
       size: pagination.size,
-      keyword: keyword.value || undefined
+      keyword: keyword.value || undefined,
+      type: typeFilter.value || undefined
     })
     files.value = res.data.list
     pagination.total = res.data.total
@@ -126,8 +197,13 @@ function handleSearch() {
 
 function resetSearch() {
   keyword.value = ''
+  typeFilter.value = ''
   pagination.page = 1
   loadFiles()
+}
+
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(row => row.id)
 }
 
 function handleSizeChange(size) {
@@ -179,10 +255,66 @@ async function removeFile(row) {
   try {
     await deleteFileApi(row.id)
     ElMessage.success('删除成功')
+    selectedIds.value = []
     loadFiles()
   } catch (error) {
     // 拦截器已提示
   }
+}
+
+async function removeSelected() {
+  const ids = selectedIds.value
+  if (!ids.length) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${ids.length} 个文件吗？`, '提示', { type: 'warning' })
+  } catch (error) {
+    return
+  }
+
+  try {
+    await deleteFilesApi(ids)
+    ElMessage.success('删除成功')
+    selectedIds.value = []
+    loadFiles()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function canPreview(row) {
+  const ext = extensionOf(row.originalName)
+  return IMAGE_EXTENSIONS.includes(ext) || ext === 'pdf'
+}
+
+async function previewFile(row) {
+  try {
+    const res = await previewFileApi(row.id)
+    if (previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value)
+    }
+    previewUrl.value = URL.createObjectURL(res.data)
+    previewName.value = row.originalName
+    previewKind.value = extensionOf(row.originalName) === 'pdf' ? 'pdf' : 'image'
+    previewVisible.value = true
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function closePreview() {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
+
+function extensionOf(name) {
+  if (!name || !name.includes('.')) {
+    return ''
+  }
+  return name.substring(name.lastIndexOf('.') + 1).toLowerCase()
 }
 
 function saveBlob(response, fallbackName) {
@@ -236,6 +368,28 @@ function formatSize(size) {
 
 .keyword-input {
   width: 260px;
+}
+
+.type-select {
+  width: 140px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.preview-frame {
+  width: 100%;
+  height: 60vh;
+  border: none;
 }
 
 .pagination-wrapper {
