@@ -57,6 +57,7 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // 建表脚本是 CREATE TABLE IF NOT EXISTS，老库不会自动改表结构，只能在这里补
         ensureMenuStructure();
+        ensureRoleDataScope();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedMenus();
@@ -236,6 +237,19 @@ public class DataSeeder implements ApplicationRunner {
         }
     }
 
+    private void ensureRoleDataScope() {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_role' AND column_name = 'data_scope'",
+                Integer.class);
+        if (count != null && count > 0) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE sys_role ADD COLUMN data_scope TINYINT NOT NULL DEFAULT 1 "
+                + "COMMENT '数据范围：1全部 2本部门 3本部门及以下 4仅本人' AFTER description");
+        log.info("角色表补充 data_scope 字段");
+    }
+
     private SysMenu createMenu(Long parentId, String path, String title, String component, String icon,
                                String permission, int sort) {
         SysMenu menu = new SysMenu();
@@ -323,6 +337,11 @@ public class DataSeeder implements ApplicationRunner {
             role.setCode(parts[0]);
             role.setName(parts[1]);
             role.setDescription(parts[2]);
+            role.setDataScope(switch (parts[0]) {
+                case "admin" -> 1;
+                case "editor" -> 2;
+                default -> 4;
+            });
             roleMapper.insert(role);
             permissions.forEach(p -> permissionMapper.insert(new SysRolePermission(role.getId(), p)));
         });

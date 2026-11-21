@@ -14,6 +14,11 @@
         <el-table-column prop="name" label="角色名称" />
         <el-table-column prop="code" label="角色标识" />
         <el-table-column prop="description" label="描述" />
+        <el-table-column label="数据范围" width="140">
+          <template #default="scope">
+            <el-tag size="small" type="info">{{ dataScopeLabel(scope.row.dataScope) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="permissions" label="权限">
           <template #default="scope">
             <el-tag 
@@ -58,6 +63,17 @@
             placeholder="请输入角色描述"
             :rows="3"
           />
+        </el-form-item>
+        <el-form-item label="数据范围">
+          <el-select v-model="roleForm.dataScope" style="width: 100%;">
+            <el-option
+              v-for="item in dataScopeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <div class="form-tip">控制该角色在用户、日志等列表中能查看的数据范围</div>
         </el-form-item>
         <el-form-item label="权限">
           <div class="permission-groups">
@@ -116,8 +132,21 @@ const roleForm = reactive({
   name: '',
   code: '',
   description: '',
+  dataScope: 1,
   permissions: []
 })
+
+const dataScopeOptions = [
+  { value: 1, label: '全部数据' },
+  { value: 2, label: '本部门数据' },
+  { value: 3, label: '本部门及以下' },
+  { value: 4, label: '仅本人' }
+]
+
+function dataScopeLabel(value) {
+  const option = dataScopeOptions.find(item => item.value === (value || 1))
+  return option ? option.label : '全部数据'
+}
 
 const formRules = {
   name: [
@@ -205,6 +234,7 @@ function openEditDialog(row) {
     name: row.name,
     code: row.code,
     description: row.description,
+    dataScope: row.dataScope || 1,
     // 复制数组，避免取消编辑时污染列表数据
     permissions: [...row.permissions]
   })
@@ -216,6 +246,7 @@ function resetForm() {
   roleForm.name = ''
   roleForm.code = ''
   roleForm.description = ''
+  roleForm.dataScope = 1
   roleForm.permissions = []
 }
 
@@ -227,6 +258,7 @@ async function saveRole() {
     name: roleForm.name,
     code: roleForm.code,
     description: roleForm.description,
+    dataScope: roleForm.dataScope,
     permissions: roleForm.permissions
   }
 
@@ -293,5 +325,12 @@ function getPermissionName(perm) {
 .permission-empty {
   font-size: 13px;
   color: #909399;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.6;
+  margin-top: 4px;
 }
 </style>

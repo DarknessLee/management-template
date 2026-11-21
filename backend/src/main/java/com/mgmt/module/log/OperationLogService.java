@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.PageResult;
 import com.mgmt.module.log.entity.SysOperationLog;
 import com.mgmt.module.log.mapper.SysOperationLogMapper;
+import com.mgmt.module.role.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -21,6 +22,7 @@ import java.util.List;
 public class OperationLogService {
 
     private final SysOperationLogMapper logMapper;
+    private final DataScopeService dataScopeService;
 
     /**
      * 异步落库，避免写日志拖慢业务接口的响应时间。
@@ -80,6 +82,16 @@ public class OperationLogService {
                         .or().like(SysOperationLog::getUri, keyword))
                 .ge(startTime != null, SysOperationLog::getCreateTime, startTime)
                 .le(endTime != null, SysOperationLog::getCreateTime, endTime);
+
+        // 数据范围受限时只看范围内用户的日志；空集合用 -1 兜底，避免生成非法 IN 条件
+        List<Long> visibleUserIds = dataScopeService.visibleUserIds();
+        if (visibleUserIds != null) {
+            if (visibleUserIds.isEmpty()) {
+                wrapper.eq(SysOperationLog::getId, -1L);
+            } else {
+                wrapper.in(SysOperationLog::getUserId, visibleUserIds);
+            }
+        }
         return wrapper;
     }
 }

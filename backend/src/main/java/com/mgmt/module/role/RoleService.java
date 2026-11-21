@@ -50,6 +50,7 @@ public class RoleService {
         role.setName(request.getName());
         role.setCode(request.getCode());
         role.setDescription(request.getDescription());
+        role.setDataScope(normalizeDataScope(request.getDataScope()));
         roleMapper.insert(role);
 
         savePermissions(role.getId(), request.getPermissions());
@@ -65,6 +66,7 @@ public class RoleService {
         role.setName(request.getName());
         role.setCode(request.getCode());
         role.setDescription(request.getDescription());
+        role.setDataScope(normalizeDataScope(request.getDataScope()));
         roleMapper.updateById(role);
 
         // 权限采用"先删后插"，比逐条 diff 简单，也避免脏数据
@@ -117,6 +119,16 @@ public class RoleService {
         return role;
     }
 
+    /**
+     * 只接受 1-4 的数据范围，非法值按全部数据处理，避免脏数据导致查询条件异常。
+     */
+    private int normalizeDataScope(Integer dataScope) {
+        if (dataScope == null || dataScope < 1 || dataScope > 4) {
+            return 1;
+        }
+        return dataScope;
+    }
+
     private void savePermissions(Long roleId, List<String> permissions) {
         if (permissions == null) {
             return;
@@ -143,6 +155,7 @@ public class RoleService {
         vo.setName(role.getName());
         vo.setCode(role.getCode());
         vo.setDescription(role.getDescription());
+        vo.setDataScope(role.getDataScope() == null ? 1 : role.getDataScope());
         vo.setPermissions(permissions);
         vo.setCreateTime(role.getCreateTime());
         return vo;

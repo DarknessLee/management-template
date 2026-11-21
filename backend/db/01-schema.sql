@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS sys_role (
     name        VARCHAR(50)  NOT NULL COMMENT '角色名称',
     code        VARCHAR(50)  NOT NULL COMMENT '角色标识（英文）',
     description VARCHAR(255) DEFAULT NULL COMMENT '描述',
+    data_scope  TINYINT      NOT NULL DEFAULT 1 COMMENT '数据范围：1全部 2本部门 3本部门及以下 4仅本人',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (id),

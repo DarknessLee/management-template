@@ -8,6 +8,7 @@ import com.mgmt.common.PageResult;
 import com.mgmt.common.UserContext;
 import com.mgmt.module.dept.entity.SysDept;
 import com.mgmt.module.dept.mapper.SysDeptMapper;
+import com.mgmt.module.role.DataScopeService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
 import com.mgmt.module.user.dto.UserCreateRequest;
@@ -35,6 +36,7 @@ public class UserService {
     private final SysRoleMapper roleMapper;
     private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
+    private final DataScopeService dataScopeService;
 
     public PageResult<UserVO> page(long page, long size, String keyword) {
         LambdaQueryWrapper<SysUser> wrapper = searchWrapper(keyword);
@@ -69,6 +71,13 @@ public class UserService {
                     .or().like(SysUser::getRealName, keyword)
                     .or().like(SysUser::getEmail, keyword));
         }
+        // 列表和导出共用这里，数据权限只需维护一处
+        DataScopeService.DataScope scope = dataScopeService.current();
+        if (scope.selfOnly()) {
+            wrapper.eq(SysUser::getId, scope.userId() == null ? -1L : scope.userId());
+        } else if (!scope.all()) {
+            wrapper.in(SysUser::getDeptId, scope.deptIds().isEmpty() ? List.of(-1L) : scope.deptIds());
+        }
         return wrapper;
     }
 
@@ -91,7 +100,9 @@ public class UserService {
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
         user.setRoleId(requireRole(req.getRole()).getId());
-        user.setDeptId(requireDeptId(req.getDeptId()));
+        Long deptId = requireDeptId(req.getDeptId());
+        ensureDeptVisible(deptId);
+        user.setDeptId(deptId);
         user.setStatus(req.getStatus() == null ? 1 : req.getStatus());
         userMapper.insert(user);
 
@@ -127,7 +138,9 @@ public class UserService {
             user.setRoleId(requireRole(req.getRole()).getId());
         }
         if (req.getDeptId() != null) {
-            user.setDeptId(requireDeptId(req.getDeptId()));
+            Long deptId = requireDeptId(req.getDeptId());
+            ensureDeptVisible(deptId);
+            user.setDeptId(deptId);
         }
         if (req.getStatus() != null) {
             user.setStatus(req.getStatus());
@@ -152,7 +165,23 @@ public class UserService {
         if (user == null) {
             throw new BizException(404, "用户不存在");
         }
+        if (!dataScopeService.current().canSeeUser(user.getId(), user.getDeptId())) {
+            throw new BizException(403, "无权操作该用户");
+        }
         return user;
+    }
+
+    /**
+     * 数据范围受限的用户只能把用户放到自己可见的部门下。
+     */
+    private void ensureDeptVisible(Long deptId) {
+        DataScopeService.DataScope scope = dataScopeService.current();
+        if (scope.all()) {
+            return;
+        }
+        if (!scope.deptLimited() || !scope.deptIds().contains(deptId)) {
+            throw new BizException(403, "无权在该部门下维护用户");
+        }
     }
 
     private SysRole requireRole(String code) {

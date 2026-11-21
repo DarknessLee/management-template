@@ -6,17 +6,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.PageResult;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
+import com.mgmt.module.role.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class LoginLogService {
 
     private final LoginLogMapper loginLogMapper;
+    private final DataScopeService dataScopeService;
 
     public PageResult<LoginLog> page(long page, long size, String username,
                                      LocalDateTime startTime, LocalDateTime endTime) {
@@ -26,6 +29,16 @@ public class LoginLogService {
                 .le(endTime != null, LoginLog::getLoginTime, endTime)
                 .orderByDesc(LoginLog::getLoginTime)
                 .orderByDesc(LoginLog::getId);
+
+        // 与操作日志一致，按当前用户角色的数据范围过滤
+        List<Long> visibleUserIds = dataScopeService.visibleUserIds();
+        if (visibleUserIds != null) {
+            if (visibleUserIds.isEmpty()) {
+                wrapper.eq(LoginLog::getId, -1L);
+            } else {
+                wrapper.in(LoginLog::getUserId, visibleUserIds);
+            }
+        }
 
         IPage<LoginLog> result = loginLogMapper.selectPage(new Page<>(page, size), wrapper);
         return PageResult.of(result, result.getRecords());
