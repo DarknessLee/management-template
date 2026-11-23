@@ -20,13 +20,16 @@
 | 前端 | Vue 3、Vite 5、Vue Router、Pinia、Element Plus、Axios |
 | 后端 | Java 21、Spring Boot 3.2、MyBatis-Plus 3.5、JJWT、BCrypt |
 | 存储 | MySQL 8（业务数据）、Redis 7（登录 token 白名单、验证码） |
-| 环境 | Docker Compose 管理 MySQL / Redis |
+| 环境 | Docker Compose 管理 MySQL / Redis，支持一条命令全栈部署 |
 
 ## 目录结构
 
 ```
 management-template/
+├── docker-compose.yml            # 一键部署：MySQL + Redis + 后端 + 前端
 ├── frontend/                     # Vue 3 前端
+│   ├── Dockerfile                # 多阶段构建，产物交给 nginx
+│   ├── nginx.conf                # SPA 回退 + /api 反向代理
 │   ├── src/api/                  # 接口封装（user/role/menu/dept/dict/notice/job/file/log…）
 │   ├── src/stores/               # Pinia：登录态 user、动态菜单 menu、品牌与水印 site
 │   ├── src/layout/               # 布局与多标签页 TagsView
@@ -35,11 +38,12 @@ management-template/
 │   ├── src/utils/                # request（token/401）、dict 字典缓存、asset 资源地址
 │   └── vite.config.js            # 开发代理 /api -> localhost:8080
 └── backend/                      # Spring Boot 后端（单模块分层）
+    ├── Dockerfile                # 多阶段构建，运行镜像内置建表脚本
     ├── db/01-schema.sql          # 建表脚本（启动时幂等执行）
-    ├── docker-compose.yml        # mgmt-mysql / mgmt-redis
+    ├── docker-compose.yml        # 仅启动 mgmt-mysql / mgmt-redis（本地开发用）
     └── src/main/java/com/mgmt/
         ├── common/               # Result、PageResult、BizException、UserContext
-        ├── config/               # MyBatis-Plus、拦截器注册、BCrypt
+        ├── config/               # MyBatis-Plus、拦截器注册、BCrypt、OpenAPI
         ├── security/             # JwtUtil、AuthInterceptor、@RequirePermission、@OperationLog
         ├── init/                 # DataSeeder 种子数据与历史库补丁
         └── module/               # auth/user/role/permission/menu/dept/dict/notice/
@@ -84,6 +88,22 @@ npm run dev
 
 打开 http://localhost:3000 ，使用 `admin / 123456` 或 `user / 123456` 登录（登录需要输入图形验证码）。
 
+### 4. Docker 一键部署（可选）
+
+无需本地安装 JDK / Node，在项目根目录执行：
+
+```powershell
+docker compose up -d --build
+```
+
+完成后访问 http://localhost:3000 ，使用 `admin / 123456` 登录；接口文档见 http://localhost:3000/api/swagger-ui/index.html 。
+
+- 四个服务：`mysql`、`redis`、`backend`、`frontend`，前后端通过 nginx 的 `/api` 反向代理联通。
+- 后端通过环境变量连接容器内的 MySQL / Redis，无需修改 `application.yml`。
+- 端口被占用时可用环境变量覆盖：`$env:FRONTEND_PORT=3100; $env:BACKEND_PORT=8180; docker compose up -d --build`。
+- 数据保存在具名卷 `mgmt-mysql-data`、`mgmt-redis-data`、`mgmt-uploads` 中，`docker compose down -v` 可彻底清空。
+- 根目录的 `docker-compose.yml` 与 `backend/docker-compose.yml` 不要同时启动，后者只用于本地开发时启动数据库依赖。
+
 ## 接口一览
 
 所有接口统一返回 `{ code, message, data }`，`code=200` 表示成功；除登录前接口外均需 `Authorization: Bearer <token>`。
@@ -105,6 +125,19 @@ npm run dev
 | 系统设置 | `GET/PUT /api/settings`、`GET /api/settings/public`（登录页品牌与水印开关，免登录） |
 | 监控/在线 | `GET /api/monitor`、`GET /api/online-users`、强制下线 |
 | 个人中心 | `GET/PUT /api/profile`、`PUT /api/profile/password`、`POST /api/profile/avatar` |
+
+## 接口文档
+
+后端已接入 springdoc OpenAPI 3，启动后可直接浏览和调试接口：
+
+| 入口 | 地址 |
+| --- | --- |
+| Swagger UI | http://localhost:8080/api/swagger-ui/index.html |
+| OpenAPI JSON | http://localhost:8080/api/v3/api-docs |
+
+Docker 部署时同样可通过前端域名访问：http://localhost:3000/api/swagger-ui/index.html 。
+
+调试受保护接口：先调用 `POST /api/auth/login` 拿到 `token`，点击页面右上角 **Authorize** 填入 token（不需要手写 `Bearer` 前缀）即可。登录、验证码、公开设置等接口不需要授权。
 
 ## 关键设计说明（学习笔记）
 

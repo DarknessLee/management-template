@@ -9,6 +9,8 @@ import com.mgmt.module.notice.dto.NoticeRequest;
 import com.mgmt.module.notice.entity.SysNotice;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,11 +26,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/notices")
+@Tag(name = "通知公告", description = "公告的发布、维护与阅读状态")
 @RequiredArgsConstructor
 public class NoticeController {
 
     private final NoticeService noticeService;
 
+    @Operation(summary = "分页查询公告列表")
     @GetMapping
     @RequirePermission("notice:view")
     public Result<PageResult<SysNotice>> page(@RequestParam(defaultValue = "1") long page,
@@ -38,6 +42,7 @@ public class NoticeController {
         return Result.ok(noticeService.page(page, size, keyword, status));
     }
 
+    @Operation(summary = "新增公告")
     @PostMapping
     @RequirePermission("notice:edit")
     @OperationLog(module = "通知公告", action = "新增公告")
@@ -45,6 +50,7 @@ public class NoticeController {
         return Result.ok(noticeService.create(request));
     }
 
+    @Operation(summary = "编辑公告")
     @PutMapping("/{id}")
     @RequirePermission("notice:edit")
     @OperationLog(module = "通知公告", action = "编辑公告")
@@ -80,6 +86,7 @@ public class NoticeController {
         return Result.ok(noticeService.reads(id, page, size));
     }
 
+    @Operation(summary = "删除公告")
     @DeleteMapping("/{id}")
     @RequirePermission("notice:edit")
     @OperationLog(module = "通知公告", action = "删除公告")

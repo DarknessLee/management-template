@@ -5,6 +5,7 @@ import com.mgmt.module.profile.dto.ChangePasswordRequest;
 import com.mgmt.module.profile.dto.ProfileVO;
 import com.mgmt.module.profile.dto.UpdateProfileRequest;
 import com.mgmt.security.OperationLog;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @RestController
 @RequestMapping("/profile")
+@Tag(name = "个人中心", description = "当前登录用户的资料与密码管理")
 @RequiredArgsConstructor
 public class ProfileController {
 

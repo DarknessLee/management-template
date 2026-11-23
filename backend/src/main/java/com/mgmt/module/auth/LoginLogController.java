@@ -4,6 +4,7 @@ import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
  */
 @RestController
 @RequestMapping("/login-logs")
+@Tag(name = "登录日志", description = "用户登录记录的查询")
 @RequiredArgsConstructor
 public class LoginLogController {
 

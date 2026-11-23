@@ -8,6 +8,8 @@ import com.mgmt.module.job.dto.JobVO;
 import com.mgmt.module.job.entity.SysJobLog;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,12 +25,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/jobs")
+@Tag(name = "定时任务", description = "定时任务的配置、执行与日志")
 @RequiredArgsConstructor
 public class JobController {
 
     private final JobService jobService;
     private final JobLogService jobLogService;
 
+    @Operation(summary = "查询定时任务列表")
     @GetMapping
     @RequirePermission("job:view")
     public Result<List<JobVO>> list(@RequestParam(required = false) String keyword,
@@ -64,6 +68,7 @@ public class JobController {
         return Result.ok();
     }
 
+    @Operation(summary = "手动执行任务")
     @PostMapping("/{id}/run")
     @RequirePermission("job:edit")
     @OperationLog(module = "定时任务", action = "执行任务")

@@ -5,6 +5,7 @@ import com.mgmt.module.dept.dto.DeptRequest;
 import com.mgmt.module.dept.dto.DeptVO;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/depts")
+@Tag(name = "部门管理", description = "组织部门树与部门维护")
 @RequiredArgsConstructor
 public class DeptController {
 

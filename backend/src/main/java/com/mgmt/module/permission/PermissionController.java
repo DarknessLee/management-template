@@ -5,6 +5,7 @@ import com.mgmt.module.permission.dto.PermissionRequest;
 import com.mgmt.module.permission.entity.SysPermission;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/permissions")
+@Tag(name = "权限点管理", description = "权限点的定义与维护")
 @RequiredArgsConstructor
 public class PermissionController {
 

@@ -6,6 +6,7 @@ import com.mgmt.common.Result;
 import com.mgmt.module.log.entity.SysOperationLog;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
  */
 @RestController
 @RequestMapping("/logs")
+@Tag(name = "操作日志", description = "操作日志的查询、导出与清理")
 @RequiredArgsConstructor
 public class LogController {
 

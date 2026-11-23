@@ -33,7 +33,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 // /uploads/** 是静态资源：<img> 标签不会带 Authorization 头，必须放行
                 // 登录前接口：验证码、登录本身和品牌配置不能要求 token
-                .excludePathPatterns("/auth/login", "/auth/captcha", "/settings/public", "/error", "/uploads/**");
+                // Swagger UI 与 OpenAPI 文档端点同样免鉴权
+                .excludePathPatterns("/auth/login", "/auth/captcha", "/settings/public", "/error", "/uploads/**",
+                        "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html");
     }
 
     /**

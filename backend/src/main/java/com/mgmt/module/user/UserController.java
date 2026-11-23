@@ -8,6 +8,8 @@ import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +30,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/users")
+@Tag(name = "用户管理", description = "用户信息的查询、维护与导入导出")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -62,6 +65,7 @@ public class UserController {
                 .body(data);
     }
 
+    @Operation(summary = "分页查询用户列表")
     @GetMapping
     @RequirePermission("users:view")
     public Result<PageResult<UserVO>> page(@RequestParam(defaultValue = "1") long page,
@@ -76,6 +80,7 @@ public class UserController {
         return Result.ok(userService.get(id));
     }
 
+    @Operation(summary = "新增用户")
     @PostMapping
     @RequirePermission("users:add")
     @OperationLog(module = "用户管理", action = "新增用户")
@@ -83,6 +88,7 @@ public class UserController {
         return Result.ok(userService.create(request));
     }
 
+    @Operation(summary = "编辑用户")
     @PutMapping("/{id}")
     @RequirePermission("users:edit")
     @OperationLog(module = "用户管理", action = "编辑用户")
@@ -90,6 +96,7 @@ public class UserController {
         return Result.ok(userService.update(id, request));
     }
 
+    @Operation(summary = "删除用户")
     @DeleteMapping("/{id}")
     @RequirePermission("users:delete")
     @OperationLog(module = "用户管理", action = "删除用户")

@@ -3,6 +3,8 @@ package com.mgmt.module.setting;
 import com.mgmt.common.Result;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/settings")
+@Tag(name = "系统设置", description = "系统参数的查询与修改")
 @RequiredArgsConstructor
 public class SettingController {
 
@@ -28,6 +31,7 @@ public class SettingController {
     /**
      * 登录页与侧边栏展示品牌信息，不要求登录和设置权限。
      */
+    @SecurityRequirements
     @GetMapping("/public")
     public Result<Map<String, Object>> publicBasic() {
         return Result.ok(settingService.publicBasic());

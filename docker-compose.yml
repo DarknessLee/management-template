@@ -1,0 +1,73 @@
+# 一键部署：MySQL + Redis + 后端 + 前端
+# 用法：docker compose up -d --build
+# 访问：http://localhost:${FRONTEND_PORT:-3000}
+# 接口文档：http://localhost:${FRONTEND_PORT:-3000}/api/swagger-ui/index.html
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Mgmt_2026
+      MYSQL_DATABASE: management_template
+      MYSQL_USER: mgmt
+      MYSQL_PASSWORD: Mgmt_2026
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mgmt-mysql-data:/var/lib/mysql
+      - ./backend/db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pMgmt_2026"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "Mgmt_2026_redis", "--appendonly", "yes"]
+    volumes:
+      - mgmt-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Mgmt_2026_redis", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      # 容器内通过服务名访问 MySQL / Redis，覆盖 application.yml 的本地地址
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/management_template?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: mgmt
+      SPRING_DATASOURCE_PASSWORD: Mgmt_2026
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: Mgmt_2026_redis
+      TZ: Asia/Shanghai
+    volumes:
+      - mgmt-uploads:/app/uploads
+    ports:
+      # 默认 8080，便于直接访问 Swagger；被占用时可用 BACKEND_PORT 覆盖
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mgmt-mysql-data:
+  mgmt-redis-data:
+  mgmt-uploads:

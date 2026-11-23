@@ -5,6 +5,8 @@ import com.mgmt.common.Result;
 import com.mgmt.module.file.dto.FileVO;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -26,11 +28,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/files")
+@Tag(name = "文件管理", description = "文件的上传、下载与批量删除")
 @RequiredArgsConstructor
 public class FileController {
 
     private final FileService fileService;
 
+    @Operation(summary = "分页查询文件列表")
     @GetMapping
     @RequirePermission("file:view")
     public Result<PageResult<FileVO>> page(@RequestParam(defaultValue = "1") long page,
@@ -40,6 +44,7 @@ public class FileController {
         return Result.ok(fileService.page(page, size, keyword, type));
     }
 
+    @Operation(summary = "上传文件")
     @PostMapping
     @RequirePermission("file:edit")
     @OperationLog(module = "文件管理", action = "上传文件")
@@ -50,6 +55,7 @@ public class FileController {
     /**
      * 通过接口下载而不是直接暴露静态地址：文件名可带中文，且 Content-Disposition 强制附件下载。
      */
+    @Operation(summary = "下载文件")
     @GetMapping("/{id}/download")
     @RequirePermission("file:view")
     public ResponseEntity<byte[]> download(@PathVariable Long id) {
@@ -80,6 +86,7 @@ public class FileController {
                 .body(download.content());
     }
 
+    @Operation(summary = "批量删除文件")
     @DeleteMapping("/batch")
     @RequirePermission("file:edit")
     @OperationLog(module = "文件管理", action = "批量删除文件")

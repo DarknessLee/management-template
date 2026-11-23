@@ -6,6 +6,7 @@ import com.mgmt.module.menu.dto.MenuRequest;
 import com.mgmt.module.menu.entity.SysMenu;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/menus")
+@Tag(name = "菜单管理", description = "菜单与路由配置的维护")
 @RequiredArgsConstructor
 public class MenuController {
 

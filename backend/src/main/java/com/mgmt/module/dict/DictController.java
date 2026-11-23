@@ -8,6 +8,7 @@ import com.mgmt.module.dict.entity.SysDictItem;
 import com.mgmt.module.dict.entity.SysDictType;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/dicts")
+@Tag(name = "数据字典", description = "字典类型与字典项的维护")
 @RequiredArgsConstructor
 public class DictController {
 
