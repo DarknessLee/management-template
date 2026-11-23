@@ -98,7 +98,7 @@
               :x2="chart.width - 16"
               :y1="line.y"
               :y2="line.y"
-              stroke="#EBEEF5"
+              stroke="var(--app-border)"
               stroke-dasharray="4 4"
             />
             <text
@@ -120,7 +120,7 @@
               stroke-linejoin="round"
             />
             <g v-for="point in chart.points" :key="point.label">
-              <circle :cx="point.x" :cy="point.y" r="4" fill="#fff" stroke="#409EFF" stroke-width="2">
+              <circle :cx="point.x" :cy="point.y" r="4" fill="var(--app-bg-container)" stroke="#409EFF" stroke-width="2">
                 <title>{{ point.label }}：{{ point.value }} 次</title>
               </circle>
               <text :x="point.x" :y="point.y - 11" text-anchor="middle" class="point-value">
@@ -399,8 +399,8 @@ async function loadDashboard() {
   padding: 28px 32px;
   border-radius: 14px;
   color: #fff;
-  background: linear-gradient(120deg, #2f7cf6 0%, #5b8ff9 55%, #6fb1fc 100%);
-  box-shadow: 0 10px 24px rgba(64, 158, 255, 0.25);
+  background: var(--app-hero-bg);
+  box-shadow: var(--app-hero-shadow);
 }
 
 .hero-main {
@@ -511,7 +511,7 @@ async function loadDashboard() {
   gap: 16px;
   padding: 20px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-bg-container);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -533,22 +533,22 @@ async function loadDashboard() {
 }
 
 .icon-blue {
-  background: #e8f4fd;
+  background: rgba(64, 158, 255, 0.12);
   color: #409eff;
 }
 
 .icon-green {
-  background: #e8f8eb;
+  background: rgba(103, 194, 58, 0.12);
   color: #67c23a;
 }
 
 .icon-orange {
-  background: #fff7e6;
+  background: rgba(230, 162, 60, 0.12);
   color: #e6a23c;
 }
 
 .icon-purple {
-  background: #f5f0ff;
+  background: rgba(146, 84, 222, 0.12);
   color: #9254de;
 }
 
@@ -558,21 +558,21 @@ async function loadDashboard() {
 
 .stat-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
   margin-bottom: 4px;
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: #303133;
+  color: var(--app-text-primary);
   line-height: 1.2;
 }
 
 .stat-extra {
   margin-top: 4px;
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -593,7 +593,7 @@ async function loadDashboard() {
 .card {
   padding: 20px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-bg-container);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   min-width: 0;
 }
@@ -608,13 +608,13 @@ async function loadDashboard() {
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .card-subtitle {
   margin-top: 4px;
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
 }
 
 .chart-legend {
@@ -622,7 +622,7 @@ async function loadDashboard() {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .chart-legend i {
@@ -644,7 +644,7 @@ async function loadDashboard() {
 
 .axis-text {
   font-size: 11px;
-  fill: #a8abb2;
+  fill: var(--app-text-placeholder);
 }
 
 .point-value {
@@ -694,12 +694,12 @@ async function loadDashboard() {
 }
 
 .overview-name {
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .overview-value {
   margin-left: auto;
-  color: #303133;
+  color: var(--app-text-primary);
   font-weight: 600;
 }
 
@@ -723,7 +723,7 @@ async function loadDashboard() {
 .module-name {
   width: 72px;
   flex-shrink: 0;
-  color: #606266;
+  color: var(--app-text-regular);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -733,7 +733,7 @@ async function loadDashboard() {
   flex: 1;
   height: 8px;
   border-radius: 4px;
-  background: #f0f2f5;
+  background: var(--app-hover-bg);
   overflow: hidden;
 }
 
@@ -746,7 +746,7 @@ async function loadDashboard() {
 .module-value {
   width: 32px;
   text-align: right;
-  color: #303133;
+  color: var(--app-text-primary);
   font-weight: 600;
 }
 
@@ -762,7 +762,7 @@ async function loadDashboard() {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--app-border-light);
 }
 
 .operation-item:last-child {
@@ -793,7 +793,7 @@ async function loadDashboard() {
 
 .operation-title {
   font-size: 13px;
-  color: #303133;
+  color: var(--app-text-primary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -802,7 +802,7 @@ async function loadDashboard() {
 .operation-meta {
   margin-top: 3px;
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
 }
 
 .notice-item {
@@ -811,7 +811,7 @@ async function loadDashboard() {
   justify-content: space-between;
   gap: 12px;
   padding: 11px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--app-border-light);
   cursor: pointer;
 }
 
@@ -837,7 +837,7 @@ async function loadDashboard() {
 
 .notice-title {
   font-size: 13px;
-  color: #303133;
+  color: var(--app-text-primary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -846,20 +846,20 @@ async function loadDashboard() {
 
 .notice-time {
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
   flex-shrink: 0;
 }
 
 .notice-dialog-meta {
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
   margin-bottom: 12px;
 }
 
 .notice-content {
   font-size: 14px;
   line-height: 1.8;
-  color: #606266;
+  color: var(--app-text-regular);
   white-space: pre-wrap;
 }
 

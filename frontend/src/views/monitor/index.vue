@@ -160,27 +160,27 @@ function formatUptime(milliseconds) {
 <style scoped>
 .stat-card {
   padding: 20px;
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   margin-bottom: 20px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .stat-value {
   margin: 10px 0 14px;
   font-size: 22px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .stat-extra {
   margin-top: 12px;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .info-block {

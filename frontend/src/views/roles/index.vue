@@ -304,7 +304,7 @@ function getPermissionName(perm) {
 
 .permission-group {
   padding: 6px 0;
-  border-bottom: 1px dashed #EBEEF5;
+  border-bottom: 1px dashed var(--app-border);
 }
 
 .permission-group:last-child {
@@ -324,12 +324,12 @@ function getPermissionName(perm) {
 
 .permission-empty {
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
   line-height: 1.6;
   margin-top: 4px;
 }

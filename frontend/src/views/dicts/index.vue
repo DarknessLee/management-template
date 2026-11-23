@@ -388,13 +388,13 @@ async function deleteItem(row) {
 
 .drawer-code {
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .drawer-empty {
   margin-top: 16px;
   text-align: center;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 </style>

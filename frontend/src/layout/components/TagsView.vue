@@ -101,8 +101,8 @@ function handleCommand(command) {
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: #fff;
-  border-bottom: 1px solid #EBEEF5;
+  background: var(--app-bg-container);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .tags-scroll {
@@ -124,11 +124,11 @@ function handleCommand(command) {
   gap: 4px;
   height: 26px;
   padding: 0 10px;
-  border: 1px solid #DCDFE6;
+  border: 1px solid var(--app-border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--app-bg-container);
   font-size: 12px;
-  color: #606266;
+  color: var(--app-text-regular);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -156,6 +156,6 @@ function handleCommand(command) {
 
 .tags-more {
   padding: 4px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 </style>

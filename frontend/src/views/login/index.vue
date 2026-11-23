@@ -171,7 +171,7 @@ async function handleLogin() {
 .login-wrapper {
   width: 400px;
   padding: 40px;
-  background: #fff;
+  background: var(--app-bg-container);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
@@ -191,13 +191,13 @@ async function handleLogin() {
 .login-header h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #303133;
+  color: var(--app-text-primary);
   margin-bottom: 8px;
 }
 
 .login-header p {
   font-size: 14px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .login-form {
@@ -228,8 +228,8 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  color: #909399;
+  background: var(--app-hover-bg);
+  color: var(--app-text-secondary);
   font-size: 12px;
 }
 
@@ -239,6 +239,6 @@ async function handleLogin() {
 
 .login-tips p {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--app-text-placeholder);
 }
 </style>

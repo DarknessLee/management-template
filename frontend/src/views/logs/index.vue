@@ -239,7 +239,7 @@ function saveBlob(response, fallbackName) {
 .page-tip {
   margin-right: auto;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .search-bar {
@@ -278,14 +278,14 @@ function saveBlob(response, fallbackName) {
 .detail-label {
   display: block;
   font-weight: 600;
-  color: #606266;
+  color: var(--app-text-regular);
   margin-bottom: 4px;
 }
 
 .log-detail pre {
   margin: 0;
   padding: 10px 12px;
-  background: #f5f7fa;
+  background: var(--app-hover-bg);
   border-radius: 4px;
   font-size: 12px;
   white-space: pre-wrap;

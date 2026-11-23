@@ -124,7 +124,7 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSettingsApi, updateSettingsApi } from '@/api/settings'
@@ -162,6 +162,11 @@ const siteStore = useSiteStore()
 
 onMounted(() => {
   loadSettings()
+})
+
+// 切换主题下拉框即时预览，保存后由 siteStore 统一写缓存并全局生效
+watch(() => basicForm.defaultTheme, (theme) => {
+  siteStore.setTheme(theme, false)
 })
 
 async function loadSettings() {
@@ -208,7 +213,7 @@ function resetSettings() {
 }
 
 .setting-card {
-  background: #fff;
+  background: var(--app-bg-container);
   border-radius: 8px;
   padding: 24px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
@@ -217,16 +222,16 @@ function resetSettings() {
 .setting-hint {
   margin-left: 10px;
   font-size: 12px;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
 }
 
 .setting-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .info-list {
@@ -243,12 +248,12 @@ function resetSettings() {
 
 .info-label {
   font-size: 14px;
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .info-value {
   font-size: 14px;
-  color: #303133;
+  color: var(--app-text-primary);
   font-weight: 500;
 }
 </style>

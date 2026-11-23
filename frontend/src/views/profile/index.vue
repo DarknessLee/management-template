@@ -229,7 +229,7 @@ async function handleAvatarUpload(options) {
 .avatar-tip {
   margin-top: 10px;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .profile-name {
@@ -239,7 +239,7 @@ async function handleAvatarUpload(options) {
 }
 
 .profile-account {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
 }
 
@@ -251,6 +251,6 @@ async function handleAvatarUpload(options) {
 .password-tip {
   margin-left: 90px;
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 </style>

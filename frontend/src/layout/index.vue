@@ -15,8 +15,8 @@
         <el-menu 
           :default-active="activeMenu" 
           :collapse="sidebarCollapsed"
-          background-color="#304156"
-          text-color="#bfcbd9"
+          background-color="var(--app-sidebar-bg)"
+          text-color="var(--app-sidebar-text)"
           active-text-color="#409EFF"
           router
         >
@@ -57,6 +57,14 @@
           </span>
         </div>
         <div class="header-right">
+          <el-button
+            class="notice-btn"
+            circle
+            title="切换主题"
+            @click="siteStore.toggleTheme()"
+          >
+            <el-icon><component :is="icons[siteStore.theme === 'dark' ? 'Sunny' : 'Moon']" /></el-icon>
+          </el-button>
           <el-popover
             v-model:visible="noticePopoverVisible"
             placement="bottom-end"
@@ -164,7 +172,9 @@ import {
   ChatDotRound,
   Fold, 
   Expand, 
-  ArrowDown 
+  ArrowDown,
+  Moon,
+  Sunny
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -222,7 +232,9 @@ const icons = {
   ChatDotRound,
   Fold,
   Expand,
-  ArrowDown
+  ArrowDown,
+  Moon,
+  Sunny
 }
 
 const activeMenu = computed(() => route.path)
@@ -306,7 +318,7 @@ function collectLeafPaths(menus, paths = []) {
 
 .sidebar {
   width: 220px;
-  background: #304156;
+  background: var(--app-sidebar-bg);
   transition: width 0.3s ease;
   flex-shrink: 0;
 }
@@ -320,7 +332,7 @@ function collectLeafPaths(menus, paths = []) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2b3a4a;
+  background: var(--app-sidebar-logo-bg);
   color: #fff;
   font-size: 18px;
   font-weight: 600;
@@ -369,12 +381,12 @@ function collectLeafPaths(menus, paths = []) {
 
 .header {
   height: 60px;
-  background: #fff;
+  background: var(--app-bg-container);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .header-left {
@@ -391,17 +403,17 @@ function collectLeafPaths(menus, paths = []) {
   align-items: center;
   justify-content: center;
   border: none;
-  background: #F5F7FA;
+  background: var(--app-hover-bg);
   cursor: pointer;
 }
 
 .toggle-btn:hover {
-  background: #E4E7ED;
+  background: var(--app-hover-bg-strong);
 }
 
 .breadcrumb {
   font-size: 14px;
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .header-right {
@@ -414,11 +426,11 @@ function collectLeafPaths(menus, paths = []) {
   width: 36px;
   height: 36px;
   border: none;
-  background: #F5F7FA;
+  background: var(--app-hover-bg);
 }
 
 .notice-btn:hover {
-  background: #E4E7ED;
+  background: var(--app-hover-bg-strong);
 }
 
 .notice-panel-header {
@@ -426,22 +438,22 @@ function collectLeafPaths(menus, paths = []) {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 10px;
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid var(--app-border);
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .notice-count {
   font-size: 12px;
   font-weight: 400;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .notice-empty {
   padding: 24px 0;
   text-align: center;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .notice-list {
@@ -451,34 +463,34 @@ function collectLeafPaths(menus, paths = []) {
 
 .notice-item {
   padding: 10px 4px;
-  border-bottom: 1px solid #F2F6FC;
+  border-bottom: 1px solid var(--app-border-light);
   cursor: pointer;
 }
 
 .notice-item:hover {
-  background: #F5F7FA;
+  background: var(--app-hover-bg);
 }
 
 .notice-title {
   font-size: 14px;
-  color: #303133;
+  color: var(--app-text-primary);
   margin-bottom: 4px;
 }
 
 .notice-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .notice-detail-time {
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
   margin-bottom: 12px;
 }
 
 .notice-detail-content {
   font-size: 14px;
-  color: #303133;
+  color: var(--app-text-primary);
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-word;
@@ -494,12 +506,12 @@ function collectLeafPaths(menus, paths = []) {
 }
 
 .user-info:hover {
-  background: #F5F7FA;
+  background: var(--app-hover-bg);
 }
 
 .content-wrapper {
   flex: 1;
   overflow-y: auto;
-  background: #F5F7FA;
+  background: var(--app-bg-page);
 }
 </style>

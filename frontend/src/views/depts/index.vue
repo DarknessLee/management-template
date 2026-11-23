@@ -213,6 +213,6 @@ function filterTree(nodes, excludeId) {
 .tip {
   margin-top: 12px;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 </style>

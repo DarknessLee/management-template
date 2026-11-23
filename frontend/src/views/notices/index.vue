@@ -399,11 +399,11 @@ async function deleteNotice(row) {
 
 .read-summary {
   margin-bottom: 12px;
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .read-summary strong {
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .read-pager {

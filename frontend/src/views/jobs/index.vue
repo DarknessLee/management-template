@@ -343,13 +343,13 @@ async function deleteJob(row) {
 .tip {
   margin-top: 12px;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .handler-tip {
   margin: 4px 0 0;
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .log-pager {

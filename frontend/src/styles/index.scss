@@ -11,11 +11,64 @@ $header-height: 60px;
   --primary-color: #{$primary-color};
   --sidebar-width: #{$sidebar-width};
   --header-height: #{$header-height};
+
+  /* 页面与容器 */
+  --app-bg-page: #F5F7FA;
+  --app-bg-container: #fff;
+  --app-hover-bg: #F5F7FA;
+  --app-hover-bg-strong: #E4E7ED;
+
+  /* 文本 */
+  --app-text-primary: #303133;
+  --app-text-regular: #606266;
+  --app-text-secondary: #909399;
+  --app-text-placeholder: #a8abb2;
+
+  /* 边框 */
+  --app-border: #EBEEF5;
+  --app-border-light: #F2F6FC;
+
+  /* 侧边栏 */
+  --app-sidebar-bg: #304156;
+  --app-sidebar-logo-bg: #2b3a4a;
+  --app-sidebar-text: #bfcbd9;
+
+  /* 仪表盘欢迎横幅 */
+  --app-hero-bg: linear-gradient(120deg, #2f7cf6 0%, #5b8ff9 55%, #6fb1fc 100%);
+  --app-hero-shadow: 0 10px 24px rgba(64, 158, 255, 0.25);
+}
+
+html.dark {
+  --app-bg-page: #141414;
+  --app-bg-container: #1d1e1f;
+  --app-hover-bg: #262727;
+  --app-hover-bg-strong: #363637;
+
+  --app-text-primary: #E5EAF3;
+  --app-text-regular: #CFD3DC;
+  --app-text-secondary: #A3A6AD;
+  --app-text-placeholder: #8D9095;
+
+  --app-border: #414243;
+  --app-border-light: #363637;
+
+  --app-sidebar-bg: #1d1e1f;
+  --app-sidebar-logo-bg: #141414;
+  --app-sidebar-text: #A3A6AD;
+
+  --app-hero-bg: linear-gradient(120deg, #1b3358 0%, #22446b 55%, #2a5680 100%);
+  --app-hero-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+html,
+body {
+  background: var(--app-bg-page);
+  color: var(--app-text-primary);
 }
 
 .page-container {
   padding: 20px;
-  background: #F5F7FA;
+  background: var(--app-bg-page);
   min-height: calc(100vh - #{$header-height});
 }
 
@@ -29,11 +82,11 @@ $header-height: 60px;
 .page-title {
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .card {
-  background: #fff;
+  background: var(--app-bg-container);
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
@@ -45,8 +98,8 @@ $header-height: 60px;
 }
 
 .el-table {
-  --el-table-header-text-color: #606266;
-  --el-table-row-hover-bg-color: #F5F7FA;
+  --el-table-header-text-color: var(--app-text-regular);
+  --el-table-row-hover-bg-color: var(--app-hover-bg);
 }
 
 .el-form-item__label {
@@ -54,9 +107,9 @@ $header-height: 60px;
 }
 
 .el-dialog__header {
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .el-dialog__footer {
-  border-top: 1px solid #EBEEF5;
+  border-top: 1px solid var(--app-border);
 }
