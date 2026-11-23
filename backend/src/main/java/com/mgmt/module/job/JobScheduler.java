@@ -1,5 +1,6 @@
 package com.mgmt.module.job;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.module.job.entity.SysJob;
 import com.mgmt.module.job.mapper.SysJobMapper;
@@ -89,7 +90,7 @@ public class JobScheduler {
     public String runNow(SysJob job) {
         JobHandler handler = handlerMap.get(job.getHandlerKey());
         if (handler == null) {
-            throw new BizException("任务处理器不存在：" + job.getHandlerKey());
+            throw new BizException(I18n.get("job.handlerMissing", job.getHandlerKey()));
         }
         long start = System.currentTimeMillis();
         try {

@@ -1,5 +1,6 @@
 package com.mgmt.module.permission;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
 import com.mgmt.module.permission.dto.PermissionRequest;
@@ -47,7 +48,7 @@ public class PermissionDefinitionService {
         // 编码被 @RequirePermission、路由 meta、v-permission 直接引用，
         // 改了会让已有代码校验和角色授权同时失效，因此只允许改名称和分组
         if (!permission.getCode().equals(request.getCode().trim())) {
-            throw new BizException("权限编码创建后不可修改");
+            throw new BizException(I18n.get("permission.codeImmutable"));
         }
 
         permission.setName(request.getName().trim());
@@ -62,23 +63,23 @@ public class PermissionDefinitionService {
         long roleCount = rolePermissionMapper.selectCount(new LambdaQueryWrapper<SysRolePermission>()
                 .eq(SysRolePermission::getPermission, permission.getCode()));
         if (roleCount > 0) {
-            throw new BizException("该权限点已被 " + roleCount + " 个角色使用，请先在角色管理中取消授权");
+            throw new BizException(I18n.get("permission.inUse", roleCount));
         }
         permissionMapper.deleteById(id);
     }
 
     private void validate(PermissionRequest request) {
         if (!StringUtils.hasText(request.getCode())) {
-            throw new BizException("请输入权限编码");
+            throw new BizException(I18n.get("permission.codeRequired"));
         }
         if (!request.getCode().trim().matches("^[a-z][a-z0-9]*:[a-z][a-z0-9]*$")) {
-            throw new BizException("权限编码格式应为 模块:动作，如 users:view");
+            throw new BizException(I18n.get("permission.codeFormat"));
         }
         if (!StringUtils.hasText(request.getName())) {
-            throw new BizException("请输入权限名称");
+            throw new BizException(I18n.get("permission.nameRequired"));
         }
         if (!StringUtils.hasText(request.getModule())) {
-            throw new BizException("请输入所属模块");
+            throw new BizException(I18n.get("permission.moduleRequired"));
         }
     }
 
@@ -86,14 +87,14 @@ public class PermissionDefinitionService {
         long exists = permissionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
                 .eq(SysPermission::getCode, code.trim()));
         if (exists > 0) {
-            throw new BizException("权限编码已存在");
+            throw new BizException(I18n.get("permission.codeExists"));
         }
     }
 
     private SysPermission requirePermission(Long id) {
         SysPermission permission = permissionMapper.selectById(id);
         if (permission == null) {
-            throw new BizException(404, "权限点不存在");
+            throw new BizException(404, I18n.get("permission.notFound"));
         }
         return permission;
     }

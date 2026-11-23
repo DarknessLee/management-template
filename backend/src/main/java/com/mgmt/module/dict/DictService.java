@@ -1,5 +1,6 @@
 package com.mgmt.module.dict;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -57,7 +58,7 @@ public class DictService {
         validateType(request);
         // code 会被业务代码直接引用，改了会让已有下拉数据取不到
         if (!type.getCode().equals(request.getCode().trim())) {
-            throw new BizException("字典编码创建后不可修改");
+            throw new BizException(I18n.get("dict.codeImmutable"));
         }
         type.setName(request.getName().trim());
         type.setRemark(request.getRemark());
@@ -71,7 +72,7 @@ public class DictService {
         long itemCount = itemMapper.selectCount(new LambdaQueryWrapper<SysDictItem>()
                 .eq(SysDictItem::getTypeId, id));
         if (itemCount > 0) {
-            throw new BizException("该字典下还有 " + itemCount + " 个字典项，请先删除字典项");
+            throw new BizException(I18n.get("dict.hasItems", itemCount));
         }
         typeMapper.deleteById(id);
     }
@@ -96,7 +97,7 @@ public class DictService {
 
     public SysDictItem createItem(DictItemRequest request) {
         if (request.getTypeId() == null) {
-            throw new BizException("请选择字典类型");
+            throw new BizException(I18n.get("dict.typeRequired"));
         }
         requireType(request.getTypeId());
         validateItem(request);
@@ -137,22 +138,22 @@ public class DictService {
 
     private void validateType(DictTypeRequest request) {
         if (!StringUtils.hasText(request.getName())) {
-            throw new BizException("请输入字典名称");
+            throw new BizException(I18n.get("dict.nameRequired"));
         }
         if (!StringUtils.hasText(request.getCode())) {
-            throw new BizException("请输入字典编码");
+            throw new BizException(I18n.get("dict.codeRequired"));
         }
         if (!request.getCode().trim().matches("^[a-z][a-z0-9_]*$")) {
-            throw new BizException("字典编码只能包含小写字母、数字和下划线，且以字母开头");
+            throw new BizException(I18n.get("dict.codeFormat"));
         }
     }
 
     private void validateItem(DictItemRequest request) {
         if (!StringUtils.hasText(request.getLabel())) {
-            throw new BizException("请输入字典标签");
+            throw new BizException(I18n.get("dict.labelRequired"));
         }
         if (!StringUtils.hasText(request.getValue())) {
-            throw new BizException("请输入字典值");
+            throw new BizException(I18n.get("dict.valueRequired"));
         }
     }
 
@@ -163,7 +164,7 @@ public class DictService {
             wrapper.ne(SysDictType::getId, excludeId);
         }
         if (typeMapper.selectCount(wrapper) > 0) {
-            throw new BizException("字典编码已存在");
+            throw new BizException(I18n.get("dict.codeExists"));
         }
     }
 
@@ -175,14 +176,14 @@ public class DictService {
             wrapper.ne(SysDictItem::getId, excludeId);
         }
         if (itemMapper.selectCount(wrapper) > 0) {
-            throw new BizException("该字典下已存在相同的字典值");
+            throw new BizException(I18n.get("dict.valueExists"));
         }
     }
 
     private SysDictType requireType(Long id) {
         SysDictType type = typeMapper.selectById(id);
         if (type == null) {
-            throw new BizException(404, "字典类型不存在");
+            throw new BizException(404, I18n.get("dict.typeNotFound"));
         }
         return type;
     }
@@ -190,7 +191,7 @@ public class DictService {
     private SysDictItem requireItem(Long id) {
         SysDictItem item = itemMapper.selectById(id);
         if (item == null) {
-            throw new BizException(404, "字典项不存在");
+            throw new BizException(404, I18n.get("dict.itemNotFound"));
         }
         return item;
     }

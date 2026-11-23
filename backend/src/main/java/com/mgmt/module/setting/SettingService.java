@@ -1,5 +1,6 @@
 package com.mgmt.module.setting;
 
+import com.mgmt.common.I18n;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgmt.common.BizException;
@@ -111,7 +112,7 @@ public class SettingService {
     @Transactional
     public void update(Map<String, Object> body) {
         if (body == null) {
-            throw new BizException("配置内容不能为空");
+            throw new BizException(I18n.get("setting.contentRequired"));
         }
         for (String key : defaults().keySet()) {
             if (!body.containsKey(key)) {
@@ -121,7 +122,7 @@ public class SettingService {
             try {
                 json = objectMapper.writeValueAsString(body.get(key));
             } catch (Exception e) {
-                throw new BizException("配置格式不正确：" + key);
+                throw new BizException(I18n.get("setting.formatInvalid", key));
             }
             save(key, json);
         }

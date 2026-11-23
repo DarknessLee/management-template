@@ -1,5 +1,6 @@
 package com.mgmt.module.auth;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.module.auth.dto.CaptchaVO;
 import lombok.RequiredArgsConstructor;
@@ -47,16 +48,16 @@ public class CaptchaService {
 
     public void verify(String key, String input) {
         if (key == null || key.isBlank()) {
-            throw new BizException(400, "请先获取验证码");
+            throw new BizException(400, I18n.get("auth.captchaRequired"));
         }
         String expected = redisTemplate.opsForValue().get(KEY_PREFIX + key);
         if (expected == null) {
-            throw new BizException(400, "验证码已过期，请刷新后重试");
+            throw new BizException(400, I18n.get("auth.captchaExpired"));
         }
         // 无论对错都删除：避免攻击者用同一张图反复试
         redisTemplate.delete(KEY_PREFIX + key);
         if (input == null || !expected.equalsIgnoreCase(input.trim())) {
-            throw new BizException(400, "验证码不正确");
+            throw new BizException(400, I18n.get("auth.captchaIncorrect"));
         }
     }
 
@@ -101,7 +102,7 @@ public class CaptchaService {
             ImageIO.write(image, "png", out);
             return Base64.getEncoder().encodeToString(out.toByteArray());
         } catch (IOException e) {
-            throw new BizException(500, "验证码生成失败");
+            throw new BizException(500, I18n.get("auth.captchaGenerateFailed"));
         }
     }
 }

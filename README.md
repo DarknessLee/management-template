@@ -106,7 +106,7 @@ docker compose up -d --build
 
 ## 接口一览
 
-所有接口统一返回 `{ code, message, data }`，`code=200` 表示成功；除登录前接口外均需 `Authorization: Bearer <token>`。
+所有接口统一返回 `{ code, message, data }`，`code=200` 表示成功；除登录前接口外均需 `Authorization: Bearer <token>`。错误提示跟随请求头 `Accept-Language`（`zh-CN` / `en`）返回对应语言，前端 axios 会自动携带当前界面语言。
 
 | 模块 | 主要接口 |
 | --- | --- |
@@ -155,6 +155,7 @@ Docker 部署时同样可通过前端域名访问：http://localhost:3000/api/sw
 12. **文件安全**：上传做扩展名白名单与 20MB 限制；下载使用 attachment，预览使用 inline 并返回真实 MIME，图片/PDF 可直接在弹窗中渲染。
 13. **品牌配置与水印**：`GET /settings/public` 只暴露标题、Logo、水印开关等非敏感字段并加入拦截器白名单，登录页无需 token 即可读取；设置保存后前端立即刷新品牌与水印，无需刷新页面。水印由 Canvas 生成平铺底图，包含登录人、姓名和日期，`pointer-events: none` 不影响操作。
 14. **字典缓存**：`useDictOptions` 在会话内缓存字典项，接口异常时使用兜底选项，避免每个页面重复请求。
+15. **接口提示国际化**：后端用 `ResourceBundleMessageSource` 读取 `i18n/messages.properties`（中文）与 `messages_en.properties`（英文），Locale 来自请求头 `Accept-Language`；业务代码通过 `I18n.get("key", args...)` 取提示，DTO 校验注解直接写 `{validation.xxx}`，由 Spring 的校验器解析。
 
 ## 新增模块约定
 

@@ -8,22 +8,22 @@ import lombok.Data;
 @Data
 public class UserCreateRequest {
 
-    @NotBlank(message = "请输入用户名")
+    @NotBlank(message = "{validation.usernameRequired}")
     private String username;
 
-    @NotBlank(message = "请输入姓名")
+    @NotBlank(message = "{validation.realNameRequired}")
     private String realName;
 
-    @NotBlank(message = "请输入密码")
-    @Size(min = 6, message = "密码长度不能少于 6 位")
+    @NotBlank(message = "{validation.passwordRequired}")
+    @Size(min = 6, message = "{validation.passwordMinLength}")
     private String password;
 
-    @Email(message = "请输入正确的邮箱")
+    @Email(message = "{validation.emailInvalid}")
     private String email;
 
     private String phone;
 
-    @NotBlank(message = "请选择角色")
+    @NotBlank(message = "{validation.roleRequired}")
     private String role;
 
     private Long deptId;

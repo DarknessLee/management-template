@@ -6,15 +6,15 @@ import lombok.Data;
 @Data
 public class LoginRequest {
 
-    @NotBlank(message = "请输入用户名")
+    @NotBlank(message = "{validation.usernameRequired}")
     private String username;
 
-    @NotBlank(message = "请输入密码")
+    @NotBlank(message = "{validation.passwordRequired}")
     private String password;
 
-    @NotBlank(message = "请获取验证码")
+    @NotBlank(message = "{validation.captchaKeyRequired}")
     private String captchaKey;
 
-    @NotBlank(message = "请输入验证码")
+    @NotBlank(message = "{validation.captchaCodeRequired}")
     private String captchaCode;
 }

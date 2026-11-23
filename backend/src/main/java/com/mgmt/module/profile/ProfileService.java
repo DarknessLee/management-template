@@ -1,5 +1,6 @@
 package com.mgmt.module.profile;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.common.UserContext;
 import com.mgmt.module.profile.dto.ChangePasswordRequest;
@@ -57,10 +58,10 @@ public class ProfileService {
     public void changePassword(ChangePasswordRequest request) {
         SysUser user = currentUser();
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new BizException(400, "原密码不正确");
+            throw new BizException(400, I18n.get("profile.oldPasswordWrong"));
         }
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
-            throw new BizException(400, "新密码不能与原密码相同");
+            throw new BizException(400, I18n.get("profile.samePassword"));
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userMapper.updateById(user);
@@ -70,10 +71,10 @@ public class ProfileService {
     @Transactional
     public String uploadAvatar(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BizException(400, "请选择头像文件");
+            throw new BizException(400, I18n.get("profile.avatarRequired"));
         }
         if (file.getSize() > MAX_AVATAR_SIZE) {
-            throw new BizException(400, "头像大小不能超过 2MB");
+            throw new BizException(400, I18n.get("profile.avatarTooLarge"));
         }
         // 只按服务端识别的 MIME 决定后缀，不使用客户端文件名：
         // 客户端文件名可能带 ../ 或伪装扩展名，直接拼路径会造成目录穿越或存储型 XSS
@@ -82,7 +83,7 @@ public class ProfileService {
             case "image/jpeg" -> "jpg";
             case "image/gif" -> "gif";
             case "image/webp" -> "webp";
-            default -> throw new BizException(400, "仅支持 png、jpg、gif、webp 格式的图片");
+            default -> throw new BizException(400, I18n.get("profile.avatarType"));
         };
 
         try {
@@ -98,7 +99,7 @@ public class ProfileService {
             userMapper.updateById(user);
             return url;
         } catch (IOException e) {
-            throw new BizException(500, "头像保存失败，请稍后重试");
+            throw new BizException(500, I18n.get("profile.avatarSaveFailed"));
         }
     }
 
@@ -123,7 +124,7 @@ public class ProfileService {
     private SysUser currentUser() {
         SysUser user = userMapper.selectById(UserContext.getUserId());
         if (user == null) {
-            throw new BizException(401, "登录已过期，请重新登录");
+            throw new BizException(401, I18n.get("common.unauthorized"));
         }
         return user;
     }

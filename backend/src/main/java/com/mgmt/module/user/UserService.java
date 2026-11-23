@@ -1,5 +1,6 @@
 package com.mgmt.module.user;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -90,7 +91,7 @@ public class UserService {
         long exists = userMapper.selectCount(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, req.getUsername()));
         if (exists > 0) {
-            throw new BizException("用户名已存在");
+            throw new BizException(I18n.get("user.usernameExists"));
         }
 
         SysUser user = new SysUser();
@@ -118,7 +119,7 @@ public class UserService {
                     .eq(SysUser::getUsername, req.getUsername())
                     .ne(SysUser::getId, id));
             if (exists > 0) {
-                throw new BizException("用户名已存在");
+                throw new BizException(I18n.get("user.usernameExists"));
             }
             user.setUsername(req.getUsername());
         }
@@ -153,7 +154,7 @@ public class UserService {
     @Transactional
     public void delete(Long id) {
         if (Objects.equals(id, UserContext.getUserId())) {
-            throw new BizException("不能删除当前登录用户");
+            throw new BizException(I18n.get("user.cannotDeleteSelf"));
         }
         requireUser(id);
         // @TableLogic 生效：这里执行的是 UPDATE ... SET deleted = 1
@@ -163,10 +164,10 @@ public class UserService {
     private SysUser requireUser(Long id) {
         SysUser user = userMapper.selectById(id);
         if (user == null) {
-            throw new BizException(404, "用户不存在");
+            throw new BizException(404, I18n.get("user.notFound"));
         }
         if (!dataScopeService.current().canSeeUser(user.getId(), user.getDeptId())) {
-            throw new BizException(403, "无权操作该用户");
+            throw new BizException(403, I18n.get("user.forbidden"));
         }
         return user;
     }
@@ -180,14 +181,14 @@ public class UserService {
             return;
         }
         if (!scope.deptLimited() || !scope.deptIds().contains(deptId)) {
-            throw new BizException(403, "无权在该部门下维护用户");
+            throw new BizException(403, I18n.get("user.deptForbidden"));
         }
     }
 
     private SysRole requireRole(String code) {
         SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getCode, code));
         if (role == null) {
-            throw new BizException("角色不存在：" + code);
+            throw new BizException(I18n.get("user.roleNotFound", code));
         }
         return role;
     }
@@ -207,7 +208,7 @@ public class UserService {
             return 0L;
         }
         if (deptMapper.selectById(deptId) == null) {
-            throw new BizException("部门不存在");
+            throw new BizException(I18n.get("dept.notFound"));
         }
         return deptId;
     }

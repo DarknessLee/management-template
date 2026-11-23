@@ -1,6 +1,7 @@
 package com.mgmt.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mgmt.common.I18n;
 import com.mgmt.common.Result;
 import com.mgmt.common.UserContext;
 import com.mgmt.module.role.PermissionService;
@@ -75,7 +76,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private boolean unauthorized(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "登录已过期，请重新登录")));
+        response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, I18n.get("common.unauthorized"))));
         return false;
     }
 
@@ -83,7 +84,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private boolean forbidden(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(Result.error(403, "没有操作权限")));
+        response.getWriter().write(objectMapper.writeValueAsString(Result.error(403, I18n.get("common.forbidden"))));
         return false;
     }
 }

@@ -1,5 +1,6 @@
 package com.mgmt.module.dept;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
 import com.mgmt.module.dept.dto.DeptRequest;
@@ -72,7 +73,7 @@ public class DeptService {
         long parentId = normalizeParent(request.getParentId());
 
         if (parentId == id) {
-            throw new BizException("上级部门不能选择自己");
+            throw new BizException(I18n.get("dept.parentSelf"));
         }
         requireParent(parentId);
         ensureNotDescendant(id, parentId);
@@ -92,12 +93,12 @@ public class DeptService {
         long children = deptMapper.selectCount(new LambdaQueryWrapper<SysDept>()
                 .eq(SysDept::getParentId, id));
         if (children > 0) {
-            throw new BizException("请先删除下级部门");
+            throw new BizException(I18n.get("dept.deleteChildrenFirst"));
         }
         long users = userMapper.selectCount(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getDeptId, id));
         if (users > 0) {
-            throw new BizException("该部门下还有 " + users + " 个用户，请先调整用户部门");
+            throw new BizException(I18n.get("dept.hasUsers", users));
         }
         deptMapper.deleteById(id);
     }
@@ -111,14 +112,14 @@ public class DeptService {
     private SysDept requireDept(Long id) {
         SysDept dept = deptMapper.selectById(id);
         if (dept == null) {
-            throw new BizException(404, "部门不存在");
+            throw new BizException(404, I18n.get("dept.notFound"));
         }
         return dept;
     }
 
     private void requireParent(long parentId) {
         if (parentId != 0 && deptMapper.selectById(parentId) == null) {
-            throw new BizException("上级部门不存在");
+            throw new BizException(I18n.get("dept.parentNotFound"));
         }
     }
 
@@ -130,7 +131,7 @@ public class DeptService {
         int depth = 0;
         while (cursor != 0 && depth++ < 100) {
             if (cursor == id) {
-                throw new BizException("上级部门不能选择自己的下级");
+                throw new BizException(I18n.get("dept.parentDescendant"));
             }
             SysDept parent = deptMapper.selectById(cursor);
             if (parent == null) {
@@ -146,7 +147,7 @@ public class DeptService {
 
     private String requireName(String name) {
         if (!StringUtils.hasText(name)) {
-            throw new BizException("请输入部门名称");
+            throw new BizException(I18n.get("dept.nameRequired"));
         }
         return name.trim();
     }

@@ -1,5 +1,6 @@
 package com.mgmt.module.user;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.module.user.dto.UserCreateRequest;
 import com.mgmt.module.user.dto.UserImportResult;
@@ -69,7 +70,7 @@ public class UserExcelService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new BizException("导出失败");
+            throw new BizException(I18n.get("common.exportFailed"));
         }
     }
 
@@ -100,17 +101,17 @@ public class UserExcelService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new BizException("模板生成失败");
+            throw new BizException(I18n.get("user.templateGenerateFailed"));
         }
     }
 
     public UserImportResult importUsers(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("请选择要导入的文件");
+            throw new BizException(I18n.get("user.importFileRequired"));
         }
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
-            throw new BizException("仅支持 .xlsx 格式的文件");
+            throw new BizException(I18n.get("user.onlyXlsx"));
         }
 
         UserImportResult result = new UserImportResult();
@@ -147,10 +148,10 @@ public class UserExcelService {
                     request.setStatus(1);
 
                     if (!StringUtils.hasText(email)) {
-                        throw new BizException("请输入邮箱");
+                        throw new BizException(I18n.get("validation.emailRequired"));
                     }
                     if (!StringUtils.hasText(phone)) {
-                        throw new BizException("请输入手机号");
+                        throw new BizException(I18n.get("validation.phoneRequired"));
                     }
                     Set<ConstraintViolation<UserCreateRequest>> violations = validator.validate(request);
                     if (!violations.isEmpty()) {
@@ -166,7 +167,7 @@ public class UserExcelService {
                 }
             }
         } catch (IOException e) {
-            throw new BizException("文件解析失败，请使用导入模板");
+            throw new BizException(I18n.get("user.parseFailed"));
         }
 
         result.setFailed(result.getTotal() - result.getSuccess());

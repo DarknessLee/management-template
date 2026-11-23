@@ -1,5 +1,6 @@
 package com.mgmt.module.role;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
 import com.mgmt.module.permission.entity.SysPermission;
@@ -82,7 +83,7 @@ public class RoleService {
         requireRole(id);
         long userCount = userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getRoleId, id));
         if (userCount > 0) {
-            throw new BizException("该角色下还有 " + userCount + " 个用户，请先调整用户角色");
+            throw new BizException(I18n.get("role.hasUsers", userCount));
         }
         roleMapper.deleteById(id);
         permissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
@@ -91,13 +92,13 @@ public class RoleService {
 
     private void requireNameAndCode(RoleRequest request) {
         if (!StringUtils.hasText(request.getName())) {
-            throw new BizException("请输入角色名称");
+            throw new BizException(I18n.get("role.nameRequired"));
         }
         if (!StringUtils.hasText(request.getCode())) {
-            throw new BizException("请输入角色标识");
+            throw new BizException(I18n.get("role.codeRequired"));
         }
         if (!request.getCode().matches("^[a-z]+$")) {
-            throw new BizException("角色标识只能包含小写字母");
+            throw new BizException(I18n.get("role.codeFormat"));
         }
     }
 
@@ -107,14 +108,14 @@ public class RoleService {
             wrapper.ne(SysRole::getId, excludeId);
         }
         if (roleMapper.selectCount(wrapper) > 0) {
-            throw new BizException("角色标识已存在");
+            throw new BizException(I18n.get("role.codeExists"));
         }
     }
 
     private SysRole requireRole(Long id) {
         SysRole role = roleMapper.selectById(id);
         if (role == null) {
-            throw new BizException(404, "角色不存在");
+            throw new BizException(404, I18n.get("role.notFound"));
         }
         return role;
     }
@@ -144,7 +145,7 @@ public class RoleService {
         long known = permissionDefinitionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
                 .in(SysPermission::getCode, codes));
         if (known != codes.size()) {
-            throw new BizException("存在未定义的权限编码，请先在权限点管理中维护");
+            throw new BizException(I18n.get("role.undefinedPermission"));
         }
         codes.forEach(code -> permissionMapper.insert(new SysRolePermission(roleId, code)));
     }

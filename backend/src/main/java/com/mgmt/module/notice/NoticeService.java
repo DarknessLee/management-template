@@ -1,5 +1,6 @@
 package com.mgmt.module.notice;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -82,7 +83,7 @@ public class NoticeService {
      */
     public SysNotice updatePinned(Long id, Integer pinned) {
         if (pinned == null || (pinned != PINNED && pinned != UNPINNED)) {
-            throw new BizException("置顶状态不正确");
+            throw new BizException(I18n.get("notice.pinInvalid"));
         }
         SysNotice notice = requireNotice(id);
         notice.setPinned(pinned);
@@ -95,7 +96,7 @@ public class NoticeService {
      */
     public SysNotice updateStatus(Long id, Integer status) {
         if (status == null || (status != STATUS_OFFLINE && status != STATUS_PUBLISHED)) {
-            throw new BizException("公告状态不正确");
+            throw new BizException(I18n.get("notice.statusInvalid"));
         }
         SysNotice notice = requireNotice(id);
         notice.setStatus(status);
@@ -142,7 +143,7 @@ public class NoticeService {
     public void markRead(Long noticeId, Long userId) {
         SysNotice notice = requireNotice(noticeId);
         if (!Integer.valueOf(STATUS_PUBLISHED).equals(notice.getStatus())) {
-            throw new BizException("公告已下线");
+            throw new BizException(I18n.get("notice.offline"));
         }
         long exists = readMapper.selectCount(new LambdaQueryWrapper<SysNoticeRead>()
                 .eq(SysNoticeRead::getNoticeId, noticeId)
@@ -220,20 +221,20 @@ public class NoticeService {
 
     private void validate(NoticeRequest request) {
         if (!StringUtils.hasText(request.getTitle())) {
-            throw new BizException("请输入公告标题");
+            throw new BizException(I18n.get("notice.titleRequired"));
         }
         if (request.getTitle().trim().length() > 100) {
-            throw new BizException("公告标题不能超过 100 个字符");
+            throw new BizException(I18n.get("notice.titleTooLong"));
         }
         if (!StringUtils.hasText(request.getContent())) {
-            throw new BizException("请输入公告内容");
+            throw new BizException(I18n.get("notice.contentRequired"));
         }
     }
 
     private SysNotice requireNotice(Long id) {
         SysNotice notice = noticeMapper.selectById(id);
         if (notice == null) {
-            throw new BizException(404, "公告不存在");
+            throw new BizException(404, I18n.get("notice.notFound"));
         }
         return notice;
     }

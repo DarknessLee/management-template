@@ -1,5 +1,6 @@
 package com.mgmt.module.auth;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.mgmt.common.BizException;
@@ -66,7 +67,7 @@ public class AuthService {
         String failKey = FAIL_KEY_PREFIX + request.getUsername();
         int fails = currentFails(failKey);
         if (lockOnFail && fails >= maxFailure) {
-            throw new BizException(400, "失败次数过多，请 " + remainingMinutes(failKey) + " 分钟后再试");
+            throw new BizException(400, I18n.get("auth.tooManyFailures", remainingMinutes(failKey)));
         }
 
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
@@ -74,18 +75,18 @@ public class AuthService {
         // 用户不存在和密码错误返回同一提示，避免被枚举出有效用户名
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             if (!lockOnFail) {
-                throw new BizException(400, "用户名或密码错误");
+                throw new BizException(400, I18n.get("auth.badCredentials"));
             }
             int remaining = recordFailure(failKey, fails, maxFailure);
             if (remaining <= 0) {
-                throw new BizException(400, "失败次数过多，请 " + failWindowMinutes + " 分钟后再试");
+                throw new BizException(400, I18n.get("auth.tooManyFailures", failWindowMinutes));
             }
-            throw new BizException(400, "用户名或密码错误，还可尝试 " + remaining + " 次");
+            throw new BizException(400, I18n.get("auth.badCredentialsRemaining", remaining));
         }
         // 登录成功清空计数，避免历史失败影响下一次
         redisTemplate.delete(failKey);
         if (!Integer.valueOf(1).equals(user.getStatus())) {
-            throw new BizException(400, "账号已被禁用，请联系管理员");
+            throw new BizException(400, I18n.get("auth.accountDisabled"));
         }
 
         LoginLog log = new LoginLog();
@@ -125,7 +126,7 @@ public class AuthService {
     public UserInfoVO userInfo() {
         SysUser user = userMapper.selectById(UserContext.getUserId());
         if (user == null) {
-            throw new BizException(401, "登录已过期，请重新登录");
+            throw new BizException(401, I18n.get("common.unauthorized"));
         }
 
         SysRole role = user.getRoleId() == null ? null : roleMapper.selectById(user.getRoleId());

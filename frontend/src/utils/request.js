@@ -22,6 +22,8 @@ service.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // 让后端按当前界面语言返回提示信息（错误信息、校验信息、401/403）
+    config.headers['Accept-Language'] = i18n.global.locale.value === 'en' ? 'en' : 'zh-CN'
     return config
   },
   (error) => Promise.reject(error)

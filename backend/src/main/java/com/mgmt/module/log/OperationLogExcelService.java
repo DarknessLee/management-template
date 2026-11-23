@@ -1,5 +1,6 @@
 package com.mgmt.module.log;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.module.log.entity.SysOperationLog;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class OperationLogExcelService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new BizException("导出失败");
+            throw new BizException(I18n.get("common.exportFailed"));
         }
     }
 

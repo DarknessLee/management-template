@@ -1,5 +1,6 @@
 package com.mgmt.module.menu;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
 import com.mgmt.module.menu.dto.MenuRequest;
@@ -62,14 +63,14 @@ public class MenuService {
 
         Long parentId = normalizeParentId(request.getParentId());
         if (parentId.equals(id)) {
-            throw new BizException("上级菜单不能是自己");
+            throw new BizException(I18n.get("menu.parentSelf"));
         }
         long childCount = childCountOf(id);
         if (childCount > 0 && !parentId.equals(0L)) {
-            throw new BizException("该菜单下存在子菜单，不能再设置上级菜单");
+            throw new BizException(I18n.get("menu.hasChildrenParent"));
         }
         if (childCount > 0 && StringUtils.hasText(request.getComponent())) {
-            throw new BizException("该菜单下存在子菜单，不能设置组件路径");
+            throw new BizException(I18n.get("menu.hasChildrenComponent"));
         }
 
         apply(menu, request);
@@ -80,7 +81,7 @@ public class MenuService {
     public void delete(Long id) {
         requireMenu(id);
         if (childCountOf(id) > 0) {
-            throw new BizException("请先删除该目录下的子菜单");
+            throw new BizException(I18n.get("menu.deleteChildrenFirst"));
         }
         menuMapper.deleteById(id);
     }
@@ -99,39 +100,39 @@ public class MenuService {
 
     private void validate(MenuRequest request) {
         if (!StringUtils.hasText(request.getTitle())) {
-            throw new BizException("请输入菜单名称");
+            throw new BizException(I18n.get("menu.nameRequired"));
         }
         if (!StringUtils.hasText(request.getPath())) {
-            throw new BizException("请输入路由路径");
+            throw new BizException(I18n.get("menu.pathRequired"));
         }
         if (!request.getPath().trim().matches("^/[a-zA-Z0-9\\-_/]*$")) {
-            throw new BizException("路由路径应以 / 开头，只能包含字母、数字、- 和 _");
+            throw new BizException(I18n.get("menu.pathFormat"));
         }
         String component = trimToNull(request.getComponent());
         if (component != null && !component.matches("^views/[a-zA-Z0-9\\-_/]+\\.vue$")) {
-            throw new BizException("组件路径格式应为 views/模块/index.vue");
+            throw new BizException(I18n.get("menu.componentFormat"));
         }
         Long parentId = normalizeParentId(request.getParentId());
         if (!parentId.equals(0L)) {
             SysMenu parent = menuMapper.selectById(parentId);
             if (parent == null) {
-                throw new BizException("上级菜单不存在");
+                throw new BizException(I18n.get("menu.parentNotFound"));
             }
             if (StringUtils.hasText(parent.getComponent())) {
-                throw new BizException("只能选择目录作为上级菜单");
+                throw new BizException(I18n.get("menu.parentMustBeDirectory"));
             }
             if (!normalizeParentId(parent.getParentId()).equals(0L)) {
-                throw new BizException("菜单最多支持两级");
+                throw new BizException(I18n.get("menu.maxTwoLevels"));
             }
             if (component == null) {
-                throw new BizException("子菜单必须填写组件路径");
+                throw new BizException(I18n.get("menu.childComponentRequired"));
             }
         }
         if (StringUtils.hasText(request.getPermission())) {
             long exists = permissionDefinitionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
                     .eq(SysPermission::getCode, request.getPermission().trim()));
             if (exists == 0) {
-                throw new BizException("权限编码不存在，请先在权限点管理中创建");
+                throw new BizException(I18n.get("menu.permissionNotFound"));
             }
         }
     }
@@ -189,7 +190,7 @@ public class MenuService {
             wrapper.ne(SysMenu::getId, excludeId);
         }
         if (menuMapper.selectCount(wrapper) > 0) {
-            throw new BizException("路由路径已存在");
+            throw new BizException(I18n.get("menu.pathExists"));
         }
     }
 
@@ -201,7 +202,7 @@ public class MenuService {
     private SysMenu requireMenu(Long id) {
         SysMenu menu = menuMapper.selectById(id);
         if (menu == null) {
-            throw new BizException(404, "菜单不存在");
+            throw new BizException(404, I18n.get("menu.notFound"));
         }
         return menu;
     }

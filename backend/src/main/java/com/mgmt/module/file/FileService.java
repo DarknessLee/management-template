@@ -1,5 +1,6 @@
 package com.mgmt.module.file;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -80,16 +81,16 @@ public class FileService {
 
     public FileVO store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BizException(400, "请选择要上传的文件");
+            throw new BizException(400, I18n.get("file.uploadRequired"));
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BizException(400, "文件大小不能超过 20MB");
+            throw new BizException(400, I18n.get("file.tooLarge"));
         }
 
         String originalName = sanitizeFilename(file.getOriginalFilename());
         String extension = extensionOf(originalName);
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new BizException(400, "不支持的文件类型，仅支持图片、PDF、Office 文档、文本和压缩包");
+            throw new BizException(400, I18n.get("file.typeUnsupported"));
         }
 
         String month = MONTH_FORMAT.format(LocalDate.now());
@@ -111,7 +112,7 @@ public class FileService {
             fileMapper.insert(entity);
             return toVO(entity);
         } catch (IOException e) {
-            throw new BizException(500, "文件保存失败，请稍后重试");
+            throw new BizException(500, I18n.get("file.saveFailed"));
         }
     }
 
@@ -119,14 +120,14 @@ public class FileService {
         SysFile file = requireFile(id);
         Path path = resolveStoredPath(file.getStoredName());
         if (!Files.exists(path)) {
-            throw new BizException(404, "文件已不存在");
+            throw new BizException(404, I18n.get("file.gone"));
         }
         try {
             String contentType = file.getContentType() == null
                     ? "application/octet-stream" : file.getContentType();
             return new FileDownload(Files.readAllBytes(path), file.getOriginalName(), contentType);
         } catch (IOException e) {
-            throw new BizException(500, "文件读取失败，请稍后重试");
+            throw new BizException(500, I18n.get("file.readFailed"));
         }
     }
 
@@ -136,7 +137,7 @@ public class FileService {
 
     public void deleteBatch(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw new BizException(400, "请选择要删除的文件");
+            throw new BizException(400, I18n.get("file.deleteRequired"));
         }
         // 已被其他管理员删除的记录直接跳过，不让整批操作失败
         ids.stream()
@@ -191,7 +192,7 @@ public class FileService {
     private SysFile requireFile(Long id) {
         SysFile file = fileMapper.selectById(id);
         if (file == null) {
-            throw new BizException(404, "文件不存在");
+            throw new BizException(404, I18n.get("file.notFound"));
         }
         return file;
     }
@@ -203,7 +204,7 @@ public class FileService {
         Path base = Paths.get(uploadDir, STORAGE_DIR).toAbsolutePath().normalize();
         Path path = base.resolve(storedName).normalize();
         if (!path.startsWith(base)) {
-            throw new BizException(400, "文件路径非法");
+            throw new BizException(400, I18n.get("file.pathInvalid"));
         }
         return path;
     }

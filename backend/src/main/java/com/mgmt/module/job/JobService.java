@@ -1,5 +1,6 @@
 package com.mgmt.module.job;
 
+import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mgmt.common.BizException;
 import com.mgmt.module.job.dto.JobHandlerVO;
@@ -42,7 +43,7 @@ public class JobService {
         long exists = jobMapper.selectCount(new LambdaQueryWrapper<SysJob>()
                 .eq(SysJob::getHandlerKey, handlerKey));
         if (exists > 0) {
-            throw new BizException("该处理器已存在任务，请直接编辑现有任务");
+            throw new BizException(I18n.get("job.handlerTaskExists"));
         }
 
         SysJob job = new SysJob();
@@ -61,7 +62,7 @@ public class JobService {
         SysJob job = requireJob(id);
         validate(request);
         if (!job.getHandlerKey().equals(request.getHandlerKey().trim())) {
-            throw new BizException("任务处理器创建后不可修改");
+            throw new BizException(I18n.get("job.handlerImmutable"));
         }
 
         job.setName(request.getName().trim());
@@ -89,29 +90,29 @@ public class JobService {
 
     private void validate(JobRequest request) {
         if (!StringUtils.hasText(request.getName())) {
-            throw new BizException("请输入任务名称");
+            throw new BizException(I18n.get("job.nameRequired"));
         }
         if (!StringUtils.hasText(request.getHandlerKey())) {
-            throw new BizException("请选择任务处理器");
+            throw new BizException(I18n.get("job.handlerRequired"));
         }
         if (!StringUtils.hasText(request.getCronExpression())) {
-            throw new BizException("请输入 Cron 表达式");
+            throw new BizException(I18n.get("job.cronRequired"));
         }
         if (!CronExpression.isValidExpression(request.getCronExpression().trim())) {
-            throw new BizException("Cron 表达式格式不正确，例如 0 0 3 * * ?");
+            throw new BizException(I18n.get("job.cronInvalid"));
         }
     }
 
     private void ensureHandlerExists(String handlerKey) {
         if (!jobScheduler.handlers().containsKey(handlerKey)) {
-            throw new BizException("任务处理器不存在");
+            throw new BizException(I18n.get("job.handlerNotFound"));
         }
     }
 
     private SysJob requireJob(Long id) {
         SysJob job = jobMapper.selectById(id);
         if (job == null) {
-            throw new BizException(404, "任务不存在");
+            throw new BizException(404, I18n.get("job.notFound"));
         }
         return job;
     }

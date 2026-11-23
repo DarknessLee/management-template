@@ -1,5 +1,6 @@
 package com.mgmt.module.log;
 
+import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
@@ -60,7 +61,7 @@ public class LogController {
     public Result<Integer> clean(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime before) {
         if (before.isAfter(LocalDateTime.now())) {
-            throw new BizException("清理时间不能晚于当前时间");
+            throw new BizException(I18n.get("log.cleanTimeFuture"));
         }
         return Result.ok(logService.deleteBefore(before, 1000));
     }
