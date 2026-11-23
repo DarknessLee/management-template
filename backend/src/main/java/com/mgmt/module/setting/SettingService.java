@@ -78,6 +78,15 @@ public class SettingService {
     }
 
     /**
+     * 安全分组配置，登录逻辑需要读取失败锁定与会话超时设置。
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> security() {
+        Object value = get().get("security");
+        return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
+    }
+
+    /**
      * 只暴露品牌相关字段，避免未登录场景读到安全配置。
      */
     public Map<String, Object> publicBasic() {

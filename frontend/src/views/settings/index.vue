@@ -39,6 +39,7 @@
               style="width: 150px;"
             />
             <span style="margin-left: 8px;">分钟</span>
+            <span class="setting-hint">会话有效期，超时后需重新登录</span>
           </el-form-item>
           <el-form-item label="密码有效期">
             <el-input-number 
@@ -52,6 +53,7 @@
           </el-form-item>
           <el-form-item label="登录失败锁定">
             <el-switch v-model="securityForm.lockOnFail" />
+            <span class="setting-hint">关闭后不限制登录失败次数</span>
           </el-form-item>
           <el-form-item label="失败锁定次数">
             <el-input-number 
@@ -62,6 +64,7 @@
               style="width: 150px;"
             />
             <span style="margin-left: 8px;">次</span>
+            <span class="setting-hint">达到次数后锁定 15 分钟</span>
           </el-form-item>
           <el-form-item label="页面水印">
             <el-switch v-model="securityForm.watermark" />

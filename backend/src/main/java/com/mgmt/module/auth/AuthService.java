@@ -12,6 +12,7 @@ import com.mgmt.module.auth.mapper.LoginLogMapper;
 import com.mgmt.module.role.PermissionService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
+import com.mgmt.module.setting.SettingService;
 import com.mgmt.module.user.entity.SysUser;
 import com.mgmt.module.user.mapper.SysUserMapper;
 import com.mgmt.security.AuthInterceptor;
@@ -45,6 +46,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final CaptchaService captchaService;
+    private final SettingService settingService;
 
     @Value("${app.login.max-fail:5}")
     private int maxFail;
@@ -57,9 +59,13 @@ public class AuthService {
         // 先验验证码：拦掉脚本化的无限次尝试，再谈账号锁定
         captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode());
 
+        Map<String, Object> security = settingService.security();
+        boolean lockOnFail = boolValue(security, "lockOnFail", true);
+        int maxFailure = intValue(security, "maxFailCount", maxFail);
+
         String failKey = FAIL_KEY_PREFIX + request.getUsername();
         int fails = currentFails(failKey);
-        if (fails >= maxFail) {
+        if (lockOnFail && fails >= maxFailure) {
             throw new BizException(400, "失败次数过多，请 " + remainingMinutes(failKey) + " 分钟后再试");
         }
 
@@ -67,7 +73,10 @@ public class AuthService {
                 .eq(SysUser::getUsername, request.getUsername()));
         // 用户不存在和密码错误返回同一提示，避免被枚举出有效用户名
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            int remaining = recordFailure(failKey, fails);
+            if (!lockOnFail) {
+                throw new BizException(400, "用户名或密码错误");
+            }
+            int remaining = recordFailure(failKey, fails, maxFailure);
             if (remaining <= 0) {
                 throw new BizException(400, "失败次数过多，请 " + failWindowMinutes + " 分钟后再试");
             }
@@ -86,14 +95,20 @@ public class AuthService {
         loginLogMapper.insert(log);
 
         String token = jwtUtil.generate(user.getId(), log.getId());
+        // 会话有效期取「设置中的登录超时」与 JWT 有效期中的较小值
+        int loginTimeout = intValue(security, "loginTimeout", (int) jwtUtil.getExpireMinutes());
+        long ttlMinutes = loginTimeout > 0
+                ? Math.min(jwtUtil.getExpireMinutes(), loginTimeout)
+                : jwtUtil.getExpireMinutes();
+        Duration ttl = Duration.ofMinutes(Math.max(ttlMinutes, 1));
         redisTemplate.opsForValue().set(
                 AuthInterceptor.TOKEN_KEY_PREFIX + token,
                 String.valueOf(user.getId()),
-                Duration.ofMinutes(jwtUtil.getExpireMinutes()));
+                ttl);
         // 同时记录到用户会话集合，便于改密码 / 强制下线时一次性清理所有 token
         String sessionKey = AuthInterceptor.USER_TOKENS_KEY_PREFIX + user.getId();
         redisTemplate.opsForSet().add(sessionKey, token);
-        redisTemplate.expire(sessionKey, Duration.ofMinutes(jwtUtil.getExpireMinutes()));
+        redisTemplate.expire(sessionKey, ttl);
 
         // 会话详情供在线用户列表使用：登录时间 + 来源 IP
         Map<String, String> online = new HashMap<>();
@@ -102,7 +117,7 @@ public class AuthService {
         online.put("ip", ip == null ? "" : ip);
         String onlineKey = AuthInterceptor.ONLINE_KEY_PREFIX + token;
         redisTemplate.opsForHash().putAll(onlineKey, online);
-        redisTemplate.expire(onlineKey, Duration.ofMinutes(jwtUtil.getExpireMinutes()));
+        redisTemplate.expire(onlineKey, ttl);
 
         return new LoginResponse(token);
     }
@@ -152,13 +167,23 @@ public class AuthService {
      * 失败计数写在 Redis：过期即自动解锁，无需定时任务清理。
      * 只有第一次失败时设置过期时间，后续失败只做自增，避免每次失败都把窗口往后推。
      */
-    private int recordFailure(String key, int currentFails) {
+    private int recordFailure(String key, int currentFails, int maxFailure) {
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {
             redisTemplate.expire(key, Duration.ofMinutes(failWindowMinutes));
         }
         int total = count == null ? currentFails + 1 : count.intValue();
-        return Math.max(maxFail - total, 0);
+        return Math.max(maxFailure - total, 0);
+    }
+
+    private int intValue(Map<String, Object> map, String key, int fallback) {
+        Object value = map.get(key);
+        return value instanceof Number number ? number.intValue() : fallback;
+    }
+
+    private boolean boolValue(Map<String, Object> map, String key, boolean fallback) {
+        Object value = map.get(key);
+        return value instanceof Boolean bool ? bool : fallback;
     }
 
     private long remainingMinutes(String key) {
