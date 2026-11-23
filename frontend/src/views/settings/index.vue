@@ -134,6 +134,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { getSettingsApi, updateSettingsApi } from '@/api/settings'
 import { useSiteStore } from '@/stores/site'
+import { localizedTitle } from '@/utils/title'
 
 // 与后端 SettingService.defaults() 保持一致
 const defaultSecurity = {
@@ -202,7 +203,8 @@ async function saveSettings() {
     // 品牌名称、Logo、主题和语言立即同步到登录页、侧边栏和浏览器标题
     await siteStore.load(true)
     const siteTitle = basicForm.siteTitle || '后台管理系统'
-    document.title = route.meta.title ? `${route.meta.title} - ${siteTitle}` : siteTitle
+    const pageTitle = localizedTitle(route.meta, siteStore.locale)
+    document.title = pageTitle ? `${pageTitle} - ${siteTitle}` : siteTitle
   } catch (error) {
     // 拦截器已提示
   }

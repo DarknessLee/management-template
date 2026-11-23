@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
 import { useSiteStore } from '@/stores/site'
+import i18n from '@/locales'
+import { localizedTitle } from '@/utils/title'
 
 // 菜单表里的 component 形如 views/users/index.vue，这里建立懒加载映射
 const viewModules = import.meta.glob('../views/**/*.vue')
@@ -23,13 +25,13 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '仪表盘' }
+        meta: { title: '仪表盘', titleEn: 'Dashboard' }
       },
       {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/profile/index.vue'),
-        meta: { title: '个人中心' }
+        meta: { title: '个人中心', titleEn: 'Profile' }
       }
     ]
   }
@@ -61,6 +63,7 @@ function registerMenuRoutes(menus) {
       component,
       meta: {
         title: menu.title,
+        titleEn: menu.titleEn,
         icon: menu.icon,
         permission: menu.permission
       }
@@ -135,7 +138,8 @@ router.beforeEach(async (to, from, next) => {
 
 router.afterEach((to) => {
   const siteTitle = useSiteStore().config.siteTitle || '后台管理系统'
-  document.title = to.meta.title ? `${to.meta.title} - ${siteTitle}` : siteTitle
+  const pageTitle = localizedTitle(to.meta, i18n.global.locale.value)
+  document.title = pageTitle ? `${pageTitle} - ${siteTitle}` : siteTitle
 })
 
 export default router

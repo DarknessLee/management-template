@@ -8,7 +8,7 @@
         :class="{ active: tag.path === route.path }"
         @click="goTo(tag)"
       >
-        <span>{{ tag.title }}</span>
+        <span>{{ tagTitle(tag) }}</span>
         <el-icon
           v-if="!tag.affix"
           class="tag-close"
@@ -38,19 +38,19 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Close, ArrowDown } from '@element-plus/icons-vue'
+import { useSiteStore } from '@/stores/site'
+import { localizedTitle } from '@/utils/title'
 
 const emit = defineEmits(['refresh'])
 
 const route = useRoute()
 const router = useRouter()
-const { t, locale } = useI18n()
+const siteStore = useSiteStore()
+const { t } = useI18n()
 
 // 仪表盘常驻，不可关闭
-function affixTags() {
-  return [{ path: '/dashboard', title: t('tags.dashboard'), affix: true }]
-}
-
-const tags = ref([...affixTags()])
+const AFFIX_TAG = { path: '/dashboard', affix: true }
+const tags = ref([{ ...AFFIX_TAG }])
 
 watch(
   () => route.path,
@@ -58,15 +58,15 @@ watch(
   { immediate: true }
 )
 
-// 语言切换后同步内置标签；业务标签文案来自后端菜单，不随语言变化
-watch(locale, () => {
-  tags.value = tags.value.map(tag => (tag.affix ? { ...tag, title: t('tags.dashboard') } : tag))
-})
+// 标题按当前语言实时解析，切换语言时标签文案自动跟随
+function tagTitle(tag) {
+  return localizedTitle(router.resolve(tag.path).meta, siteStore.locale)
+}
 
 function addTag() {
   if (!route.meta || !route.meta.title) return
   if (tags.value.some(tag => tag.path === route.path)) return
-  tags.value.push({ path: route.path, title: route.meta.title })
+  tags.value.push({ path: route.path, affix: false })
 }
 
 function goTo(tag) {
@@ -81,7 +81,7 @@ function closeTag(tag) {
   tags.value.splice(index, 1)
   if (route.path === tag.path) {
     // 优先跳到右侧标签，没有就回到左侧，最后落到仪表盘
-    const next = tags.value[index] || tags.value[index - 1] || affixTags()[0]
+    const next = tags.value[index] || tags.value[index - 1] || AFFIX_TAG
     router.push(next.path)
   }
 }
@@ -96,9 +96,9 @@ function handleCommand(command) {
     return
   }
   if (command === 'closeAll') {
-    tags.value = [...affixTags()]
-    if (route.path !== '/dashboard') {
-      router.push('/dashboard')
+    tags.value = [{ ...AFFIX_TAG }]
+    if (route.path !== AFFIX_TAG.path) {
+      router.push(AFFIX_TAG.path)
     }
   }
 }

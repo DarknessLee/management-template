@@ -192,6 +192,7 @@ CREATE TABLE IF NOT EXISTS sys_menu (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     parent_id   BIGINT       NOT NULL DEFAULT 0 COMMENT '上级菜单ID，0为顶级',
     title       VARCHAR(50)  NOT NULL COMMENT '菜单名称',
+    title_en    VARCHAR(100) DEFAULT NULL COMMENT '英文菜单名称，为空时回退中文',
     path        VARCHAR(100) NOT NULL COMMENT '前端路由路径，目录用于菜单分组标识',
     component   VARCHAR(100) DEFAULT NULL COMMENT '前端视图路径，如 views/users/index.vue；目录为空',
     icon        VARCHAR(50)  DEFAULT NULL COMMENT 'Element Plus 图标组件名',

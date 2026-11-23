@@ -71,6 +71,7 @@ public class DataSeeder implements ApplicationRunner {
         seedMenus();
         migrateMenuGroups();
         ensureFileMenu();
+        ensureMenuEnglishTitles();
         seedDepts();
         seedJobs();
         seedRoles();
@@ -243,6 +244,45 @@ public class DataSeeder implements ApplicationRunner {
                     + "COMMENT '前端视图路径，如 views/users/index.vue；目录为空'");
             log.info("菜单表放开 component 非空限制");
         }
+        Integer titleEnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_menu' AND column_name = 'title_en'",
+                Integer.class);
+        if (titleEnCount == null || titleEnCount == 0) {
+            jdbcTemplate.execute("ALTER TABLE sys_menu ADD COLUMN title_en VARCHAR(100) DEFAULT NULL "
+                    + "COMMENT '英文菜单名称，为空时回退中文' AFTER title");
+            log.info("菜单表补充 title_en 字段");
+        }
+    }
+
+    /**
+     * 英文名称按路径补齐，保证切换英文后侧边栏、面包屑和标签页是英文。
+     * 只填充空值，菜单管理页手工维护过的英文名不会被覆盖。
+     */
+    private void ensureMenuEnglishTitles() {
+        Map<String, String> titles = new LinkedHashMap<>();
+        titles.put("/dashboard", "Dashboard");
+        titles.put("/system", "System");
+        titles.put("/users", "Users");
+        titles.put("/roles", "Roles");
+        titles.put("/permissions", "Permissions");
+        titles.put("/depts", "Departments");
+        titles.put("/menus", "Menus");
+        titles.put("/dicts", "Dictionaries");
+        titles.put("/settings", "Settings");
+        titles.put("/jobs", "Scheduled Jobs");
+        titles.put("/files", "Files");
+        titles.put("/audit", "Audit");
+        titles.put("/logs", "Operation Logs");
+        titles.put("/login-logs", "Login Logs");
+        titles.put("/ops", "Monitoring");
+        titles.put("/monitor", "System Monitor");
+        titles.put("/online-users", "Online Users");
+        titles.put("/content", "Content");
+        titles.put("/notices", "Notices");
+        titles.forEach((path, titleEn) -> jdbcTemplate.update(
+                "UPDATE sys_menu SET title_en = ? WHERE path = ? AND (title_en IS NULL OR title_en = '')",
+                titleEn, path));
     }
 
     private void ensureRoleDataScope() {

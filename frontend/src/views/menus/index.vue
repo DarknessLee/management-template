@@ -26,6 +26,9 @@
             </span>
           </template>
         </el-table-column>
+        <el-table-column label="英文名称" width="150">
+          <template #default="scope">{{ scope.row.titleEn || '—' }}</template>
+        </el-table-column>
         <el-table-column label="类型" width="90">
           <template #default="scope">
             <el-tag :type="scope.row.component ? 'success' : 'info'" size="small">
@@ -77,6 +80,9 @@
         </el-form-item>
         <el-form-item label="菜单名称" prop="title">
           <el-input v-model="menuForm.title" placeholder="如 用户管理" />
+        </el-form-item>
+        <el-form-item label="英文名称">
+          <el-input v-model="menuForm.titleEn" placeholder="如 Users，切换英文时显示；留空回退中文" />
         </el-form-item>
         <el-form-item label="路由路径" prop="path">
           <el-input v-model="menuForm.path" placeholder="如 /users，目录如 /system" />
@@ -204,6 +210,7 @@ const menuForm = reactive({
   id: null,
   parentId: 0,
   title: '',
+  titleEn: '',
   path: '',
   component: '',
   icon: 'Menu',
@@ -280,6 +287,7 @@ function openAddDialog() {
     id: null,
     parentId: 0,
     title: '',
+    titleEn: '',
     path: '',
     component: '',
     icon: 'Menu',
@@ -297,6 +305,7 @@ function openEditDialog(row) {
     id: row.id,
     parentId: row.parentId || 0,
     title: row.title,
+    titleEn: row.titleEn || '',
     path: row.path,
     component: row.component || '',
     icon: row.icon || '',
@@ -314,6 +323,7 @@ async function saveMenu() {
   const payload = {
     parentId: menuForm.parentId,
     title: menuForm.title,
+    titleEn: menuForm.titleEn,
     path: menuForm.path,
     component: menuForm.component,
     icon: menuForm.icon,
@@ -341,6 +351,7 @@ async function toggleVisible(row, value) {
     await updateMenuApi(row.id, {
       parentId: row.parentId || 0,
       title: row.title,
+      titleEn: row.titleEn,
       path: row.path,
       component: row.component,
       icon: row.icon,

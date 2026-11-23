@@ -27,7 +27,7 @@
             >
               <template #title>
                 <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
-                <span>{{ menu.title }}</span>
+                <span>{{ localizedTitle(menu, siteStore.locale) }}</span>
               </template>
               <el-menu-item
                 v-for="child in menu.children"
@@ -35,12 +35,12 @@
                 :index="child.path"
               >
                 <el-icon><component :is="icons[child.icon] || icons.Menu" /></el-icon>
-                <span>{{ child.title }}</span>
+                <span>{{ localizedTitle(child, siteStore.locale) }}</span>
               </el-menu-item>
             </el-sub-menu>
             <el-menu-item v-else :index="menu.path">
               <el-icon><component :is="icons[menu.icon] || icons.Menu" /></el-icon>
-              <span>{{ menu.title }}</span>
+              <span>{{ localizedTitle(menu, siteStore.locale) }}</span>
             </el-menu-item>
           </template>
         </el-menu>
@@ -150,13 +150,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
 import { assetUrl } from '@/utils/asset'
+import { localizedTitle } from '@/utils/title'
 import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import TagsView from './components/TagsView.vue'
 import Watermark from './components/Watermark.vue'
@@ -252,7 +253,14 @@ const icons = {
 
 const activeMenu = computed(() => route.path)
 
-const currentPageTitle = computed(() => route.meta.title || '')
+const currentPageTitle = computed(() => localizedTitle(route.meta, siteStore.locale))
+
+// 语言切换后同步浏览器标题（afterEach 只在路由变化时触发）
+watch(() => siteStore.locale, () => {
+  const siteTitle = siteStore.config.siteTitle || '后台管理系统'
+  const pageTitle = currentPageTitle.value
+  document.title = pageTitle ? `${pageTitle} - ${siteTitle}` : siteTitle
+})
 
 // 刷新页面后 pinia 状态丢失，用 token 重新拉一次用户信息
 onMounted(() => {

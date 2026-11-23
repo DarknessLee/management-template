@@ -44,7 +44,6 @@ export default {
     publishedAt: 'Published at: {time}'
   },
   tags: {
-    dashboard: 'Dashboard',
     refresh: 'Refresh current',
     closeOthers: 'Close others',
     closeAll: 'Close all'

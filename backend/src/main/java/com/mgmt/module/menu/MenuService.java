@@ -88,6 +88,7 @@ public class MenuService {
     private void apply(SysMenu menu, MenuRequest request) {
         menu.setParentId(normalizeParentId(request.getParentId()));
         menu.setTitle(request.getTitle().trim());
+        menu.setTitleEn(trimToNull(request.getTitleEn()));
         menu.setPath(request.getPath().trim());
         menu.setComponent(trimToNull(request.getComponent()));
         menu.setIcon(trimToNull(request.getIcon()));

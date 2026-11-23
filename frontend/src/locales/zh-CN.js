@@ -44,7 +44,6 @@ export default {
     publishedAt: '发布时间：{time}'
   },
   tags: {
-    dashboard: '仪表盘',
     refresh: '刷新当前',
     closeOthers: '关闭其他',
     closeAll: '关闭全部'

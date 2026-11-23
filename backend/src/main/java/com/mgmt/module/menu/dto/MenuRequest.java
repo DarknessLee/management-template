@@ -10,6 +10,9 @@ public class MenuRequest {
 
     private String title;
 
+    /** 英文名称，可选 */
+    private String titleEn;
+
     private String path;
 
     private String component;

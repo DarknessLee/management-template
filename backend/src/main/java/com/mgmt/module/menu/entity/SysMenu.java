@@ -27,6 +27,9 @@ public class SysMenu {
 
     private String title;
 
+    /** 英文名称，语言切换为英文时展示，为空则回退中文名称 */
+    private String titleEn;
+
     private String path;
 
     /** 前端视图路径，如 views/users/index.vue；目录为空 */
