@@ -1,47 +1,45 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">操作日志</h2>
-      <span class="page-tip">仅记录会修改数据的操作</span>
-      <el-button @click="exportLogs">导出</el-button>
-      <el-button v-permission="'logs:clean'" type="danger" plain @click="openCleanDialog">清理日志</el-button>
+      <h2 class="page-title">{{ t('logs.title') }}</h2>
+      <span class="page-tip">{{ t('logs.tip') }}</span>
+      <el-button @click="exportLogs">{{ t('logs.export') }}</el-button>
+      <el-button v-permission="'logs:clean'" type="danger" plain @click="openCleanDialog">{{ t('logs.clean') }}</el-button>
     </div>
 
-    <el-dialog title="清理历史日志" v-model="cleanDialogVisible" width="460px">
+    <el-dialog :title="t('logs.cleanTitle')" v-model="cleanDialogVisible" width="460px">
       <el-form label-width="90px">
-        <el-form-item label="清理截止">
+        <el-form-item :label="t('logs.cleanDate')">
           <el-date-picker
             v-model="cleanDate"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="选择日期"
+            :placeholder="t('logs.cleanDatePlaceholder')"
             :disabled-date="disableFutureDate"
             style="width: 100%;"
           />
         </el-form-item>
       </el-form>
       <el-alert
-        title="将删除所选日期及之前的日志，删除后不可恢复。"
+        :title="t('logs.cleanAlert')"
         type="warning"
         :closable="false"
         show-icon
       />
       <template #footer>
-        <el-button @click="cleanDialogVisible = false">取消</el-button>
-        <el-button type="danger" :loading="cleaning" @click="cleanLogs">确认清理</el-button>
+        <el-button @click="cleanDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="danger" :loading="cleaning" @click="cleanLogs">{{ t('logs.cleanConfirm') }}</el-button>
       </template>
     </el-dialog>
 
     <div class="card">
       <div class="search-bar">
-        <el-select v-model="searchForm.module" placeholder="全部模块" clearable class="module-select">
-          <el-option label="用户管理" value="用户管理" />
-          <el-option label="角色管理" value="角色管理" />
-          <el-option label="系统设置" value="系统设置" />
+        <el-select v-model="searchForm.module" :placeholder="t('logs.modulePlaceholder')" clearable class="module-select">
+          <el-option v-for="item in moduleOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
         <el-input
           v-model="searchForm.keyword"
-          placeholder="操作人、动作或路径"
+          :placeholder="t('logs.keywordPlaceholder')"
           clearable
           class="keyword-input"
           @keyup.enter="handleSearch"
@@ -49,13 +47,13 @@
         <el-date-picker
           v-model="timeRange"
           type="datetimerange"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
+          :start-placeholder="t('logs.startTime')"
+          :end-placeholder="t('logs.endTime')"
           value-format="YYYY-MM-DD HH:mm:ss"
           class="time-range"
         />
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
+        <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
 
       <el-table :data="logList" border stripe>
@@ -63,32 +61,32 @@
           <template #default="scope">
             <div class="log-detail">
               <div class="detail-row">
-                <span class="detail-label">请求参数</span>
-                <pre>{{ scope.row.params || '无' }}</pre>
+                <span class="detail-label">{{ t('logs.params') }}</span>
+                <pre>{{ scope.row.params || t('logs.none') }}</pre>
               </div>
               <div v-if="scope.row.errorMsg" class="detail-row">
-                <span class="detail-label">错误信息</span>
+                <span class="detail-label">{{ t('logs.errorMsg') }}</span>
                 <span class="error-text">{{ scope.row.errorMsg }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="操作时间" width="170" />
-        <el-table-column prop="username" label="操作人" width="110" />
-        <el-table-column prop="module" label="模块" width="110" />
-        <el-table-column prop="action" label="动作" width="130" />
-        <el-table-column prop="method" label="方法" width="80" />
-        <el-table-column prop="uri" label="请求路径" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="ip" label="IP" width="130" />
-        <el-table-column label="耗时" width="90">
+        <el-table-column prop="createTime" :label="t('logs.columns.createTime')" width="170" />
+        <el-table-column prop="username" :label="t('logs.columns.username')" width="110" />
+        <el-table-column prop="module" :label="t('logs.columns.module')" width="110" />
+        <el-table-column prop="action" :label="t('logs.columns.action')" width="130" />
+        <el-table-column prop="method" :label="t('logs.columns.method')" width="80" />
+        <el-table-column prop="uri" :label="t('logs.columns.uri')" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="ip" :label="t('logs.columns.ip')" width="130" />
+        <el-table-column :label="t('logs.columns.duration')" width="90">
           <template #default="scope">
             {{ scope.row.durationMs }} ms
           </template>
         </el-table-column>
-        <el-table-column label="结果" width="80">
+        <el-table-column :label="t('logs.columns.result')" width="80">
           <template #default="scope">
             <el-tag :type="scope.row.success === 1 ? 'success' : 'danger'" size="small">
-              {{ scope.row.success === 1 ? '成功' : '失败' }}
+              {{ scope.row.success === 1 ? t('logs.success') : t('logs.failed') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -110,9 +108,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getLogsApi, exportLogsApi, cleanLogsApi } from '@/api/log'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
+// 模块值需要与后端记录保持一致，仅切换展示文案
+const moduleOptions = computed(() => [
+  { value: '用户管理', label: t('logs.moduleUsers') },
+  { value: '角色管理', label: t('logs.moduleRoles') },
+  { value: '系统设置', label: t('logs.moduleSettings') }
+])
 
 const logList = ref([])
 const timeRange = ref([])
@@ -143,7 +151,7 @@ async function loadLogs() {
     logList.value = res.data.list
     pagination.total = res.data.total
   } catch (error) {
-    ElMessage.error('日志加载失败')
+    ElMessage.error(t('common.requestFailed'))
   }
 }
 
@@ -186,14 +194,14 @@ function disableFutureDate(date) {
 
 async function cleanLogs() {
   if (!cleanDate.value) {
-    ElMessage.warning('请选择清理截止日期')
+    ElMessage.warning(t('logs.cleanNoDate'))
     return
   }
 
   cleaning.value = true
   try {
     const res = await cleanLogsApi(`${cleanDate.value} 23:59:59`)
-    ElMessage.success(`已清理 ${res.data} 条日志`)
+    ElMessage.success(t('logs.cleanSuccess', { count: res.data }))
     cleanDialogVisible.value = false
     pagination.page = 1
     loadLogs()

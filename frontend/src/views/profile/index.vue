@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">个人中心</h2>
+      <h2 class="page-title">{{ t('profile.title') }}</h2>
     </div>
 
     <el-row :gutter="20">
@@ -16,17 +16,17 @@
             <el-avatar :size="96" :src="assetUrl(profile.avatar)">
               <el-icon :size="32"><component :is="icons.UserFilled" /></el-icon>
             </el-avatar>
-            <div class="avatar-tip">点击更换头像</div>
+            <div class="avatar-tip">{{ t('profile.changeAvatar') }}</div>
           </el-upload>
           <p class="profile-name">{{ profile.realName || profile.username }}</p>
-          <p class="profile-account">账号：{{ profile.username }}</p>
+          <p class="profile-account">{{ t('profile.account', { name: profile.username }) }}</p>
         </div>
       </el-col>
 
       <el-col :span="17">
         <div class="card">
           <el-tabs v-model="activeTab">
-            <el-tab-pane label="基本资料" name="basic">
+            <el-tab-pane :label="t('profile.basicTab')" name="basic">
               <el-form
                 ref="profileFormRef"
                 :model="profileForm"
@@ -34,25 +34,25 @@
                 label-width="90px"
                 class="form-width"
               >
-                <el-form-item label="账号">
+                <el-form-item :label="t('profile.accountLabel')">
                   <el-input :model-value="profile.username" disabled />
                 </el-form-item>
-                <el-form-item label="姓名" prop="realName">
-                  <el-input v-model="profileForm.realName" placeholder="请输入姓名" />
+                <el-form-item :label="t('profile.realName')" prop="realName">
+                  <el-input v-model="profileForm.realName" :placeholder="t('profile.realNamePlaceholder')" />
                 </el-form-item>
-                <el-form-item label="邮箱" prop="email">
-                  <el-input v-model="profileForm.email" placeholder="请输入邮箱" />
+                <el-form-item :label="t('profile.email')" prop="email">
+                  <el-input v-model="profileForm.email" :placeholder="t('profile.emailPlaceholder')" />
                 </el-form-item>
-                <el-form-item label="手机号" prop="phone">
-                  <el-input v-model="profileForm.phone" placeholder="请输入手机号" />
+                <el-form-item :label="t('profile.phone')" prop="phone">
+                  <el-input v-model="profileForm.phone" :placeholder="t('profile.phonePlaceholder')" />
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
+                  <el-button type="primary" :loading="saving" @click="saveProfile">{{ t('profile.save') }}</el-button>
                 </el-form-item>
               </el-form>
             </el-tab-pane>
 
-            <el-tab-pane label="修改密码" name="password">
+            <el-tab-pane :label="t('profile.passwordTab')" name="password">
               <el-form
                 ref="passwordFormRef"
                 :model="passwordForm"
@@ -60,20 +60,20 @@
                 label-width="90px"
                 class="form-width"
               >
-                <el-form-item label="原密码" prop="oldPassword">
+                <el-form-item :label="t('profile.oldPassword')" prop="oldPassword">
                   <el-input v-model="passwordForm.oldPassword" type="password" show-password />
                 </el-form-item>
-                <el-form-item label="新密码" prop="newPassword">
+                <el-form-item :label="t('profile.newPassword')" prop="newPassword">
                   <el-input v-model="passwordForm.newPassword" type="password" show-password />
                 </el-form-item>
-                <el-form-item label="确认密码" prop="confirmPassword">
+                <el-form-item :label="t('profile.confirmPassword')" prop="confirmPassword">
                   <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" :loading="changing" @click="savePassword">修改密码</el-button>
+                  <el-button type="primary" :loading="changing" @click="savePassword">{{ t('profile.changePassword') }}</el-button>
                 </el-form-item>
               </el-form>
-              <p class="password-tip">修改成功后所有已登录设备都会失效，需要重新登录。</p>
+              <p class="password-tip">{{ t('profile.passwordTip') }}</p>
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -83,16 +83,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { assetUrl } from '@/utils/asset'
 import { getProfileApi, updateProfileApi, changePasswordApi, uploadAvatarApi } from '@/api/profile'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const icons = { UserFilled }
 const activeTab = ref('basic')
@@ -121,24 +123,24 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
-const profileRules = {
-  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  email: [{ type: 'email', message: '请输入正确的邮箱', trigger: 'blur' }],
-  phone: [{ pattern: /^1\d{10}$/, message: '请输入正确的手机号', trigger: 'blur' }]
-}
+const profileRules = computed(() => ({
+  realName: [{ required: true, message: t('profile.realNameRequired'), trigger: 'blur' }],
+  email: [{ type: 'email', message: t('profile.emailInvalid'), trigger: 'blur' }],
+  phone: [{ pattern: /^1\d{10}$/, message: t('profile.phoneInvalid'), trigger: 'blur' }]
+}))
 
-const passwordRules = {
-  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+const passwordRules = computed(() => ({
+  oldPassword: [{ required: true, message: t('profile.oldPasswordRequired'), trigger: 'blur' }],
   newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 32, message: '新密码长度需在 6-32 位之间', trigger: 'blur' }
+    { required: true, message: t('profile.newPasswordRequired'), trigger: 'blur' },
+    { min: 6, max: 32, message: t('profile.newPasswordLength'), trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { required: true, message: t('profile.confirmRequired'), trigger: 'blur' },
     {
       validator: (rule, value, callback) => {
         if (value !== passwordForm.newPassword) {
-          callback(new Error('两次输入的密码不一致'))
+          callback(new Error(t('profile.confirmMismatch')))
         } else {
           callback()
         }
@@ -146,7 +148,7 @@ const passwordRules = {
       trigger: 'blur'
     }
   ]
-}
+}))
 
 onMounted(() => {
   loadProfile()
@@ -172,7 +174,7 @@ async function saveProfile() {
     Object.assign(profile.value, res.data)
     // 同步刷新 store，让右上角头像和姓名立即更新
     await userStore.getUserInfo()
-    ElMessage.success('资料已保存')
+    ElMessage.success(t('profile.profileSaved'))
   } finally {
     saving.value = false
   }
@@ -190,7 +192,7 @@ async function savePassword() {
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword
     })
-    ElMessage.success('密码已修改，请重新登录')
+    ElMessage.success(t('profile.passwordChanged'))
     userStore.clearAuth()
     router.push('/login')
   } finally {
@@ -201,7 +203,7 @@ async function savePassword() {
 async function handleAvatarUpload(options) {
   const file = options.file
   if (file.size > 2 * 1024 * 1024) {
-    ElMessage.error('头像大小不能超过 2MB')
+    ElMessage.error(t('profile.avatarSize'))
     return
   }
   const formData = new FormData()
@@ -209,7 +211,7 @@ async function handleAvatarUpload(options) {
   const res = await uploadAvatarApi(formData)
   profile.value.avatar = res.data
   await userStore.getUserInfo()
-  ElMessage.success('头像已更新')
+  ElMessage.success(t('profile.avatarUpdated'))
 }
 </script>
 

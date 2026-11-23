@@ -1,10 +1,10 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">系统监控</h2>
+      <h2 class="page-title">{{ t('monitor.title') }}</h2>
       <el-button :loading="loading" @click="loadInfo">
         <el-icon><component :is="icons.Refresh" /></el-icon>
-        刷新
+        {{ t('monitor.refresh') }}
       </el-button>
     </div>
 
@@ -26,15 +26,15 @@
         </el-col>
       </el-row>
 
-      <el-descriptions title="基础信息" :column="2" border class="info-block">
-        <el-descriptions-item label="主机名">{{ info.hostName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="操作系统">
-          {{ info.osName || '-' }}（{{ info.osArch || '-' }}）
+      <el-descriptions :title="t('monitor.basicInfo')" :column="2" border class="info-block">
+        <el-descriptions-item :label="t('monitor.hostName')">{{ info.hostName || '-' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('monitor.os')">
+          {{ osText }}
         </el-descriptions-item>
-        <el-descriptions-item label="Java 版本">{{ info.javaVersion || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="CPU 核心数">{{ info.availableProcessors || '-' }} 核</el-descriptions-item>
-        <el-descriptions-item label="当前线程数">{{ info.threadCount || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="系统负载（1 分钟）">{{ loadAverageText }}</el-descriptions-item>
+        <el-descriptions-item :label="t('monitor.javaVersion')">{{ info.javaVersion || '-' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('monitor.cpuCores')">{{ t('monitor.cores', { count: info.availableProcessors || '-' }) }}</el-descriptions-item>
+        <el-descriptions-item :label="t('monitor.threadCount')">{{ info.threadCount || '-' }}</el-descriptions-item>
+        <el-descriptions-item :label="t('monitor.loadAverage')">{{ loadAverageText }}</el-descriptions-item>
       </el-descriptions>
     </div>
   </div>
@@ -44,8 +44,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { getMonitorApi } from '@/api/monitor'
+import { useSiteStore } from '@/stores/site'
+import { useI18n } from 'vue-i18n'
 
 const icons = { Refresh }
+
+const siteStore = useSiteStore()
+const { t } = useI18n()
 
 const loading = ref(false)
 const info = ref({
@@ -64,9 +69,15 @@ const info = ref({
   hostName: ''
 })
 
+const osText = computed(() => {
+  const name = info.value.osName || '-'
+  const arch = info.value.osArch || '-'
+  return siteStore.locale === 'en' ? `${name} (${arch})` : `${name}（${arch}）`
+})
+
 const loadAverageText = computed(() => {
   const value = info.value.systemLoadAverage
-  return value >= 0 ? value.toFixed(2) : '当前平台不支持'
+  return value >= 0 ? value.toFixed(2) : t('monitor.notSupported')
 })
 
 const heapPercent = computed(() => toPercent(info.value.heapUsed, info.value.heapMax))
@@ -75,32 +86,32 @@ const diskPercent = computed(() => toPercent(diskUsed.value, info.value.diskTota
 
 const stats = computed(() => [
   {
-    label: 'CPU 使用率',
+    label: t('monitor.cpuUsage'),
     value: info.value.cpuLoad >= 0 ? `${info.value.cpuLoad.toFixed(2)}%` : '--',
     percent: info.value.cpuLoad >= 0 ? Math.round(info.value.cpuLoad) : null,
     status: progressStatus(info.value.cpuLoad),
-    extra: `${info.value.availableProcessors || 0} 个可用核心`
+    extra: t('monitor.coresAvailable', { count: info.value.availableProcessors || 0 })
   },
   {
-    label: 'JVM 堆内存',
+    label: t('monitor.heap'),
     value: `${formatBytes(info.value.heapUsed)} / ${formatBytes(info.value.heapMax)}`,
     percent: heapPercent.value,
     status: progressStatus(heapPercent.value),
-    extra: `已用 ${heapPercent.value}%`
+    extra: t('monitor.usedPercent', { percent: heapPercent.value })
   },
   {
-    label: '磁盘使用',
+    label: t('monitor.disk'),
     value: `${formatBytes(diskUsed.value)} / ${formatBytes(info.value.diskTotal)}`,
     percent: diskPercent.value,
     status: progressStatus(diskPercent.value),
-    extra: `可用 ${formatBytes(info.value.diskFree)}`
+    extra: t('monitor.free', { size: formatBytes(info.value.diskFree) })
   },
   {
-    label: '运行时长',
+    label: t('monitor.uptime'),
     value: formatUptime(info.value.uptime),
     percent: null,
     status: 'success',
-    extra: `${info.value.threadCount || 0} 个线程`
+    extra: t('monitor.threads', { count: info.value.threadCount || 0 })
   }
 ])
 
@@ -150,9 +161,9 @@ function formatUptime(milliseconds) {
   const hours = Math.floor((totalMinutes % 1440) / 60)
   const minutes = totalMinutes % 60
   const parts = []
-  if (days > 0) parts.push(`${days} 天`)
-  if (hours > 0) parts.push(`${hours} 小时`)
-  parts.push(`${minutes} 分钟`)
+  if (days > 0) parts.push(t('monitor.days', { count: days }))
+  if (hours > 0) parts.push(t('monitor.hours', { count: hours }))
+  parts.push(t('monitor.minutes', { count: minutes }))
   return parts.join(' ')
 }
 </script>

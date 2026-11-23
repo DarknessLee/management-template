@@ -1,25 +1,25 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">角色管理</h2>
+      <h2 class="page-title">{{ t('roles.title') }}</h2>
       <el-button v-permission="'roles:add'" type="primary" @click="openAddDialog">
         <el-icon><component :is="icons.Plus" /></el-icon>
-        新增角色
+        {{ t('roles.add') }}
       </el-button>
     </div>
 
     <div class="card">
       <el-table :data="roleList" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="角色名称" />
-        <el-table-column prop="code" label="角色标识" />
-        <el-table-column prop="description" label="描述" />
-        <el-table-column label="数据范围" width="140">
+        <el-table-column prop="name" :label="t('roles.columns.name')" />
+        <el-table-column prop="code" :label="t('roles.columns.code')" />
+        <el-table-column prop="description" :label="t('roles.columns.description')" />
+        <el-table-column :label="t('roles.columns.dataScope')" width="140">
           <template #default="scope">
             <el-tag size="small" type="info">{{ dataScopeLabel(scope.row.dataScope) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="permissions" label="权限">
+        <el-table-column prop="permissions" :label="t('roles.columns.permissions')">
           <template #default="scope">
             <el-tag 
               v-for="(perm, index) in scope.row.permissions.slice(0, 3)" 
@@ -30,15 +30,15 @@
               {{ getPermissionName(perm) }}
             </el-tag>
             <span v-if="scope.row.permissions.length > 3">
-              等{{ scope.row.permissions.length }}项
+              {{ t('roles.permissionMore', { count: scope.row.permissions.length }) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" />
-        <el-table-column v-if="canOperate" label="操作" width="200">
+        <el-table-column prop="createTime" :label="t('roles.columns.createTime')" />
+        <el-table-column v-if="canOperate" :label="t('roles.columns.operation')" width="200">
           <template #default="scope">
-            <el-button v-permission="'roles:edit'" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button v-permission="'roles:delete'" size="small" type="danger" @click="deleteRole(scope.row)">删除</el-button>
+            <el-button v-permission="'roles:edit'" size="small" @click="openEditDialog(scope.row)">{{ t('roles.edit') }}</el-button>
+            <el-button v-permission="'roles:delete'" size="small" type="danger" @click="deleteRole(scope.row)">{{ t('roles.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -50,21 +50,21 @@
       width="600px"
     >
       <el-form ref="roleFormRef" :model="roleForm" :rules="formRules" label-width="100px">
-        <el-form-item label="角色名称" prop="name">
-          <el-input v-model="roleForm.name" placeholder="请输入角色名称" />
+        <el-form-item :label="t('roles.columns.name')" prop="name">
+          <el-input v-model="roleForm.name" :placeholder="t('roles.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="角色标识" prop="code">
-          <el-input v-model="roleForm.code" placeholder="请输入角色标识（英文）" />
+        <el-form-item :label="t('roles.columns.code')" prop="code">
+          <el-input v-model="roleForm.code" :placeholder="t('roles.codePlaceholder')" />
         </el-form-item>
-        <el-form-item label="描述" prop="description">
+        <el-form-item :label="t('roles.columns.description')" prop="description">
           <el-input 
             v-model="roleForm.description" 
             type="textarea" 
-            placeholder="请输入角色描述"
+            :placeholder="t('roles.descriptionPlaceholder')"
             :rows="3"
           />
         </el-form-item>
-        <el-form-item label="数据范围">
+        <el-form-item :label="t('roles.columns.dataScope')">
           <el-select v-model="roleForm.dataScope" style="width: 100%;">
             <el-option
               v-for="item in dataScopeOptions"
@@ -73,12 +73,12 @@
               :value="item.value"
             />
           </el-select>
-          <div class="form-tip">控制该角色在用户、日志等列表中能查看的数据范围</div>
+          <div class="form-tip">{{ t('roles.dataScopeTip') }}</div>
         </el-form-item>
-        <el-form-item label="权限">
+        <el-form-item :label="t('roles.columns.permissions')">
           <div class="permission-groups">
             <div v-if="permissionGroups.length === 0" class="permission-empty">
-              暂无可分配的权限点，请先到「权限点管理」维护
+              {{ t('roles.permissionEmpty') }}
             </div>
             <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
               <el-checkbox
@@ -99,8 +99,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveRole">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="saveRole">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -112,10 +112,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getRolesApi, createRoleApi, updateRoleApi, deleteRoleApi } from '@/api/role'
 import { getPermissionsApi } from '@/api/permission'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 
 const icons = { Plus }
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const canOperate = computed(() =>
   userStore.permissions.includes('roles:edit') || userStore.permissions.includes('roles:delete')
@@ -123,8 +125,8 @@ const canOperate = computed(() =>
 
 const roleList = ref([])
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增角色')
 const isEdit = ref(false)
+const dialogTitle = computed(() => isEdit.value ? t('roles.editTitle') : t('roles.addTitle'))
 const roleFormRef = ref(null)
 
 const roleForm = reactive({
@@ -136,27 +138,27 @@ const roleForm = reactive({
   permissions: []
 })
 
-const dataScopeOptions = [
-  { value: 1, label: '全部数据' },
-  { value: 2, label: '本部门数据' },
-  { value: 3, label: '本部门及以下' },
-  { value: 4, label: '仅本人' }
-]
+const dataScopeOptions = computed(() => [
+  { value: 1, label: t('roles.dataScope.all') },
+  { value: 2, label: t('roles.dataScope.dept') },
+  { value: 3, label: t('roles.dataScope.deptAndChildren') },
+  { value: 4, label: t('roles.dataScope.self') }
+])
 
 function dataScopeLabel(value) {
-  const option = dataScopeOptions.find(item => item.value === (value || 1))
-  return option ? option.label : '全部数据'
+  const option = dataScopeOptions.value.find(item => item.value === (value || 1))
+  return option ? option.label : t('roles.dataScope.all')
 }
 
-const formRules = {
+const formRules = computed(() => ({
   name: [
-    { required: true, message: '请输入角色名称', trigger: 'blur' }
+    { required: true, message: t('roles.nameRequired'), trigger: 'blur' }
   ],
   code: [
-    { required: true, message: '请输入角色标识', trigger: 'blur' },
-    { pattern: /^[a-z]+$/, message: '角色标识只能包含小写字母', trigger: 'blur' }
+    { required: true, message: t('roles.codeRequired'), trigger: 'blur' },
+    { pattern: /^[a-z]+$/, message: t('roles.codePattern'), trigger: 'blur' }
   ]
-}
+}))
 
 const permissionGroups = ref([])
 
@@ -221,14 +223,12 @@ function toggleGroup(group, checked) {
 
 function openAddDialog() {
   isEdit.value = false
-  dialogTitle.value = '新增角色'
   resetForm()
   dialogVisible.value = true
 }
 
 function openEditDialog(row) {
   isEdit.value = true
-  dialogTitle.value = '编辑角色'
   Object.assign(roleForm, {
     id: row.id,
     name: row.name,
@@ -268,7 +268,7 @@ async function saveRole() {
     } else {
       await createRoleApi(payload)
     }
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+    ElMessage.success(isEdit.value ? t('common.updateSuccess') : t('common.createSuccess'))
     dialogVisible.value = false
     loadRoles()
   } catch (error) {
@@ -278,14 +278,14 @@ async function saveRole() {
 
 async function deleteRole(row) {
   try {
-    await ElMessageBox.confirm('确定要删除该角色吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('roles.deleteConfirm'), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deleteRoleApi(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     loadRoles()
   } catch (error) {
     // 拦截器已提示（例如角色下仍有用户）

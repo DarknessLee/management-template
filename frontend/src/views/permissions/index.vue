@@ -1,31 +1,31 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">权限点管理</h2>
+      <h2 class="page-title">{{ t('permissions.title') }}</h2>
       <el-button v-permission="'roles:edit'" type="primary" @click="openAddDialog">
         <el-icon><component :is="icons.Plus" /></el-icon>
-        新增权限点
+        {{ t('permissions.add') }}
       </el-button>
     </div>
 
     <div class="card">
       <el-table :data="permissionList" border stripe>
-        <el-table-column prop="module" label="所属模块" width="140">
+        <el-table-column prop="module" :label="t('permissions.columns.module')" width="140">
           <template #default="scope">
             <el-tag size="small" type="info">{{ scope.row.module }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="code" label="权限编码" width="220" />
-        <el-table-column prop="name" label="权限名称" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column v-if="canEdit" label="操作" width="180">
+        <el-table-column prop="code" :label="t('permissions.columns.code')" width="220" />
+        <el-table-column prop="name" :label="t('permissions.columns.name')" />
+        <el-table-column prop="createTime" :label="t('permissions.columns.createTime')" width="180" />
+        <el-table-column v-if="canEdit" :label="t('permissions.columns.operation')" width="180">
           <template #default="scope">
-            <el-button size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deletePermission(scope.row)">删除</el-button>
+            <el-button size="small" @click="openEditDialog(scope.row)">{{ t('permissions.edit') }}</el-button>
+            <el-button size="small" type="danger" @click="deletePermission(scope.row)">{{ t('permissions.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <p class="tip">权限编码在代码中用于接口与菜单/按钮鉴权，创建后不可修改。</p>
+      <p class="tip">{{ t('permissions.tip') }}</p>
     </div>
 
     <el-dialog
@@ -34,23 +34,23 @@
       width="500px"
     >
       <el-form ref="permissionFormRef" :model="permissionForm" :rules="formRules" label-width="100px">
-        <el-form-item label="权限编码" prop="code">
+        <el-form-item :label="t('permissions.form.code')" prop="code">
           <el-input
             v-model="permissionForm.code"
             :disabled="isEdit"
-            placeholder="如 users:view"
+            :placeholder="t('permissions.codePlaceholder')"
           />
         </el-form-item>
-        <el-form-item label="权限名称" prop="name">
-          <el-input v-model="permissionForm.name" placeholder="如 查看用户" />
+        <el-form-item :label="t('permissions.form.name')" prop="name">
+          <el-input v-model="permissionForm.name" :placeholder="t('permissions.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="所属模块" prop="module">
+        <el-form-item :label="t('permissions.form.module')" prop="module">
           <el-select
             v-model="permissionForm.module"
             filterable
             allow-create
             default-first-option
-            placeholder="选择或输入模块名"
+            :placeholder="t('permissions.modulePlaceholder')"
             style="width: 100%;"
           >
             <el-option v-for="item in moduleOptions" :key="item" :label="item" :value="item" />
@@ -58,8 +58,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="savePermission">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="savePermission">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -76,16 +76,18 @@ import {
   deletePermissionApi
 } from '@/api/permission'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
 
 const icons = { Plus }
 
 const userStore = useUserStore()
+const { t } = useI18n()
 const canEdit = computed(() => userStore.permissions.includes('roles:edit'))
 
 const permissionList = ref([])
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增权限点')
 const isEdit = ref(false)
+const dialogTitle = computed(() => isEdit.value ? t('permissions.editTitle') : t('permissions.addTitle'))
 const permissionFormRef = ref(null)
 
 const permissionForm = reactive({
@@ -95,22 +97,22 @@ const permissionForm = reactive({
   module: ''
 })
 
-const formRules = {
+const formRules = computed(() => ({
   code: [
-    { required: true, message: '请输入权限编码', trigger: 'blur' },
+    { required: true, message: t('permissions.codeRequired'), trigger: 'blur' },
     {
       pattern: /^[a-z][a-z0-9]*:[a-z][a-z0-9]*$/,
-      message: '编码格式应为 模块:动作，如 users:view',
+      message: t('permissions.codePattern'),
       trigger: 'blur'
     }
   ],
   name: [
-    { required: true, message: '请输入权限名称', trigger: 'blur' }
+    { required: true, message: t('permissions.nameRequired'), trigger: 'blur' }
   ],
   module: [
-    { required: true, message: '请输入所属模块', trigger: 'blur' }
+    { required: true, message: t('permissions.moduleRequired'), trigger: 'blur' }
   ]
-}
+}))
 
 const moduleOptions = computed(() => [...new Set(permissionList.value.map(item => item.module))])
 
@@ -129,7 +131,6 @@ async function loadPermissions() {
 
 function openAddDialog() {
   isEdit.value = false
-  dialogTitle.value = '新增权限点'
   permissionForm.id = null
   permissionForm.code = ''
   permissionForm.name = ''
@@ -139,7 +140,6 @@ function openAddDialog() {
 
 function openEditDialog(row) {
   isEdit.value = true
-  dialogTitle.value = '编辑权限点'
   Object.assign(permissionForm, {
     id: row.id,
     code: row.code,
@@ -165,7 +165,7 @@ async function savePermission() {
     } else {
       await createPermissionApi(payload)
     }
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+    ElMessage.success(isEdit.value ? t('common.updateSuccess') : t('common.createSuccess'))
     dialogVisible.value = false
     loadPermissions()
   } catch (error) {
@@ -175,14 +175,14 @@ async function savePermission() {
 
 async function deletePermission(row) {
   try {
-    await ElMessageBox.confirm(`确定要删除权限点「${row.name}」吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('permissions.deleteConfirm', { name: row.name }), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deletePermissionApi(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     loadPermissions()
   } catch (error) {
     // 拦截器已提示（例如已被角色使用）

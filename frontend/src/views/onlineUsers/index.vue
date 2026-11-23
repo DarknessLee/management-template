@@ -1,26 +1,26 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">在线用户</h2>
+      <h2 class="page-title">{{ t('onlineUsers.title') }}</h2>
       <el-button :loading="loading" @click="loadOnlineUsers">
         <el-icon><component :is="icons.Refresh" /></el-icon>
-        刷新
+        {{ t('onlineUsers.refresh') }}
       </el-button>
     </div>
 
     <div class="card">
       <el-table v-loading="loading" :data="onlineUsers" border stripe>
-        <el-table-column prop="username" label="用户名" width="150" />
-        <el-table-column prop="realName" label="姓名" width="150" />
-        <el-table-column label="角色" width="130">
+        <el-table-column prop="username" :label="t('onlineUsers.columns.username')" width="150" />
+        <el-table-column prop="realName" :label="t('onlineUsers.columns.realName')" width="150" />
+        <el-table-column :label="t('onlineUsers.columns.role')" width="130">
           <template #default="scope">
             <el-tag size="small">{{ scope.row.role || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="ip" label="IP 地址" width="170" />
-        <el-table-column prop="loginTime" label="最近登录时间" width="180" />
-        <el-table-column prop="sessionCount" label="会话数" width="100" />
-        <el-table-column label="操作" width="140">
+        <el-table-column prop="ip" :label="t('onlineUsers.columns.ip')" width="170" />
+        <el-table-column prop="loginTime" :label="t('onlineUsers.columns.loginTime')" width="180" />
+        <el-table-column prop="sessionCount" :label="t('onlineUsers.columns.sessionCount')" width="100" />
+        <el-table-column :label="t('onlineUsers.columns.operation')" width="140">
           <template #default="scope">
             <el-button
               v-if="canKick && scope.row.userId !== currentUserId"
@@ -28,12 +28,12 @@
               type="danger"
               @click="kickUser(scope.row)"
             >
-              强制下线
+              {{ t('onlineUsers.kickout') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-      <p class="tip">同一用户多次登录会合并为一行，强制下线会清除该用户的全部会话。</p>
+      <p class="tip">{{ t('onlineUsers.tip') }}</p>
     </div>
   </div>
 </template>
@@ -45,9 +45,11 @@ import { Refresh } from '@element-plus/icons-vue'
 import { getOnlineUsersApi } from '@/api/online'
 import { kickoutUserApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
 
 const icons = { Refresh }
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const canKick = computed(() => userStore.permissions.includes('users:edit'))
 const currentUserId = computed(() => userStore.userInfo?.id)
@@ -74,8 +76,8 @@ async function loadOnlineUsers() {
 async function kickUser(row) {
   try {
     await ElMessageBox.confirm(
-      `确定要强制「${row.username}」下线吗？该用户的全部会话都会被清除。`,
-      '提示',
+      t('onlineUsers.kickoutConfirm', { name: row.username }),
+      t('common.confirmTitle'),
       { type: 'warning' }
     )
   } catch (error) {
@@ -84,7 +86,7 @@ async function kickUser(row) {
 
   try {
     const res = await kickoutUserApi(row.userId)
-    ElMessage.success(`已清理 ${res.data} 个会话`)
+    ElMessage.success(t('onlineUsers.kicked', { count: res.data }))
     loadOnlineUsers()
   } catch (error) {
     // 拦截器已提示

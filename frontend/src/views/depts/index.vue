@@ -1,10 +1,10 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">部门管理</h2>
+      <h2 class="page-title">{{ t('depts.title') }}</h2>
       <el-button v-permission="'dept:edit'" type="primary" @click="openAddDialog()">
         <el-icon><component :is="icons.Plus" /></el-icon>
-        新增部门
+        {{ t('depts.add') }}
       </el-button>
     </div>
 
@@ -17,25 +17,25 @@
         default-expand-all
         :tree-props="{ children: 'children' }"
       >
-        <el-table-column prop="name" label="部门名称" min-width="220" />
-        <el-table-column prop="leader" label="负责人" width="140" />
-        <el-table-column prop="phone" label="联系电话" width="160" />
-        <el-table-column prop="sort" label="排序" width="90" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column v-if="canEdit" label="操作" width="250">
+        <el-table-column prop="name" :label="t('depts.columns.name')" min-width="220" />
+        <el-table-column prop="leader" :label="t('depts.columns.leader')" width="140" />
+        <el-table-column prop="phone" :label="t('depts.columns.phone')" width="160" />
+        <el-table-column prop="sort" :label="t('depts.columns.sort')" width="90" />
+        <el-table-column prop="createTime" :label="t('depts.columns.createTime')" width="180" />
+        <el-table-column v-if="canEdit" :label="t('depts.columns.operation')" width="250">
           <template #default="scope">
-            <el-button size="small" @click="openAddDialog(scope.row)">新增下级</el-button>
-            <el-button size="small" @click="openEditDialog(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteDept(scope.row)">删除</el-button>
+            <el-button size="small" @click="openAddDialog(scope.row)">{{ t('depts.addChild') }}</el-button>
+            <el-button size="small" @click="openEditDialog(scope.row)">{{ t('depts.edit') }}</el-button>
+            <el-button size="small" type="danger" @click="deleteDept(scope.row)">{{ t('depts.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <p class="tip">删除部门前需先移除其下级部门，并调整该部门下的用户。</p>
+      <p class="tip">{{ t('depts.tip') }}</p>
     </div>
 
     <el-dialog :title="dialogTitle" v-model="dialogVisible" width="520px">
       <el-form ref="deptFormRef" :model="deptForm" :rules="formRules" label-width="90px">
-        <el-form-item label="上级部门">
+        <el-form-item :label="t('depts.parent')">
           <el-tree-select
             v-model="deptForm.parentId"
             :data="parentOptions"
@@ -43,26 +43,26 @@
             node-key="id"
             check-strictly
             clearable
-            placeholder="不选则为顶级部门"
+            :placeholder="t('depts.parentPlaceholder')"
             style="width: 100%;"
           />
         </el-form-item>
-        <el-form-item label="部门名称" prop="name">
-          <el-input v-model="deptForm.name" placeholder="请输入部门名称" />
+        <el-form-item :label="t('depts.columns.name')" prop="name">
+          <el-input v-model="deptForm.name" :placeholder="t('depts.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="负责人">
-          <el-input v-model="deptForm.leader" placeholder="请输入负责人" />
+        <el-form-item :label="t('depts.leader')">
+          <el-input v-model="deptForm.leader" :placeholder="t('depts.leaderPlaceholder')" />
         </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="deptForm.phone" placeholder="请输入联系电话" />
+        <el-form-item :label="t('depts.phone')">
+          <el-input v-model="deptForm.phone" :placeholder="t('depts.phonePlaceholder')" />
         </el-form-item>
-        <el-form-item label="排序">
+        <el-form-item :label="t('depts.sort')">
           <el-input-number v-model="deptForm.sort" :min="0" :max="9999" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveDept">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="saveDept">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -78,18 +78,24 @@ import {
   updateDeptApi,
   deleteDeptApi
 } from '@/api/dept'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 
 const icons = { Plus }
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const canEdit = computed(() => userStore.permissions.includes('dept:edit'))
 
 const deptTree = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增部门')
 const isEdit = ref(false)
+const parentName = ref('')
+const dialogTitle = computed(() => {
+  if (isEdit.value) return t('depts.editTitle')
+  return parentName.value ? t('depts.addChildTitle', { name: parentName.value }) : t('depts.addTitle')
+})
 const deptFormRef = ref(null)
 
 const deptForm = reactive({
@@ -101,11 +107,11 @@ const deptForm = reactive({
   sort: 0
 })
 
-const formRules = {
+const formRules = computed(() => ({
   name: [
-    { required: true, message: '请输入部门名称', trigger: 'blur' }
+    { required: true, message: t('depts.nameRequired'), trigger: 'blur' }
   ]
-}
+}))
 
 // 编辑时不能把自己或自己的下级选为上级，否则会形成环
 const parentOptions = computed(() => {
@@ -133,7 +139,7 @@ async function loadDepts() {
 
 function openAddDialog(parent) {
   isEdit.value = false
-  dialogTitle.value = parent ? `新增「${parent.name}」下级部门` : '新增部门'
+  parentName.value = parent ? parent.name : ''
   deptForm.id = null
   deptForm.parentId = parent ? parent.id : null
   deptForm.name = ''
@@ -145,7 +151,7 @@ function openAddDialog(parent) {
 
 function openEditDialog(row) {
   isEdit.value = true
-  dialogTitle.value = '编辑部门'
+  parentName.value = ''
   Object.assign(deptForm, {
     id: row.id,
     parentId: row.parentId || null,
@@ -175,7 +181,7 @@ async function saveDept() {
     } else {
       await createDeptApi(payload)
     }
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+    ElMessage.success(isEdit.value ? t('common.updateSuccess') : t('common.createSuccess'))
     dialogVisible.value = false
     loadDepts()
   } catch (error) {
@@ -185,14 +191,14 @@ async function saveDept() {
 
 async function deleteDept(row) {
   try {
-    await ElMessageBox.confirm(`确定要删除部门「${row.name}」吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('depts.deleteConfirm', { name: row.name }), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deleteDeptApi(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     loadDepts()
   } catch (error) {
     // 拦截器已提示（存在下级或用户时会被拦截）

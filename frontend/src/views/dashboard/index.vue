@@ -3,29 +3,29 @@
     <section class="hero">
       <div class="hero-main">
         <p class="hero-date">{{ dateText }} · {{ weekdayText }}</p>
-        <h1 class="hero-title">{{ greeting }}，{{ displayName }}</h1>
-        <p class="hero-desc">这是系统今天的运行概况，祝你工作顺利。</p>
+        <h1 class="hero-title">{{ greetingText }}</h1>
+        <p class="hero-desc">{{ t('dashboard.heroDesc') }}</p>
         <div class="hero-stats">
           <div class="hero-stat">
             <span class="hero-stat-value">{{ data.todayLogin }}</span>
-            <span class="hero-stat-label">今日登录</span>
+            <span class="hero-stat-label">{{ t('dashboard.todayLogin') }}</span>
           </div>
           <span class="hero-divider"></span>
           <div class="hero-stat">
             <span class="hero-stat-value">{{ data.todayOperations }}</span>
-            <span class="hero-stat-label">今日操作</span>
+            <span class="hero-stat-label">{{ t('dashboard.todayOperations') }}</span>
           </div>
           <span class="hero-divider"></span>
           <div class="hero-stat">
             <span class="hero-stat-value">{{ data.unreadNotices }}</span>
-            <span class="hero-stat-label">待读公告</span>
+            <span class="hero-stat-label">{{ t('dashboard.unreadNotices') }}</span>
           </div>
         </div>
       </div>
       <div class="hero-actions">
-        <button v-permission="'users:view'" class="hero-btn" @click="go('/users')">用户管理</button>
-        <button v-permission="'notice:view'" class="hero-btn" @click="go('/notices')">通知公告</button>
-        <button v-permission="'logs:view'" class="hero-btn" @click="go('/logs')">操作日志</button>
+        <button v-permission="'users:view'" class="hero-btn" @click="go('/users')">{{ t('dashboard.navUsers') }}</button>
+        <button v-permission="'notice:view'" class="hero-btn" @click="go('/notices')">{{ t('dashboard.navNotices') }}</button>
+        <button v-permission="'logs:view'" class="hero-btn" @click="go('/logs')">{{ t('dashboard.navLogs') }}</button>
       </div>
       <span class="hero-circle circle-large"></span>
       <span class="hero-circle circle-small"></span>
@@ -37,9 +37,9 @@
           <el-icon><User /></el-icon>
         </div>
         <div class="stat-body">
-          <p class="stat-label">用户总数</p>
+          <p class="stat-label">{{ t('dashboard.totalUsers') }}</p>
           <p class="stat-value">{{ data.totalUsers }}</p>
-          <p class="stat-extra">启用 {{ data.enabledUsers }} · 禁用 {{ data.disabledUsers }}</p>
+          <p class="stat-extra">{{ t('dashboard.enabledDisabled', { enabled: data.enabledUsers, disabled: data.disabledUsers }) }}</p>
         </div>
       </div>
       <div class="stat-card">
@@ -47,9 +47,9 @@
           <el-icon><OfficeBuilding /></el-icon>
         </div>
         <div class="stat-body">
-          <p class="stat-label">部门数量</p>
+          <p class="stat-label">{{ t('dashboard.totalDepts') }}</p>
           <p class="stat-value">{{ data.totalDepts }}</p>
-          <p class="stat-extra">角色 {{ data.totalRoles }} 个</p>
+          <p class="stat-extra">{{ t('dashboard.totalRoles', { count: data.totalRoles }) }}</p>
         </div>
       </div>
       <div class="stat-card">
@@ -57,9 +57,9 @@
           <el-icon><FolderOpened /></el-icon>
         </div>
         <div class="stat-body">
-          <p class="stat-label">文件总数</p>
+          <p class="stat-label">{{ t('dashboard.totalFiles') }}</p>
           <p class="stat-value">{{ data.totalFiles }}</p>
-          <p class="stat-extra">集中存储与在线预览</p>
+          <p class="stat-extra">{{ t('dashboard.fileDesc') }}</p>
         </div>
       </div>
       <div class="stat-card">
@@ -67,9 +67,9 @@
           <el-icon><Message /></el-icon>
         </div>
         <div class="stat-body">
-          <p class="stat-label">已发布公告</p>
+          <p class="stat-label">{{ t('dashboard.publishedNotices') }}</p>
           <p class="stat-value">{{ data.publishedNotices }}</p>
-          <p class="stat-extra">待读 {{ data.unreadNotices }} 条</p>
+          <p class="stat-extra">{{ t('dashboard.unreadCount', { count: data.unreadNotices }) }}</p>
         </div>
       </div>
     </section>
@@ -78,13 +78,13 @@
       <div class="card trend-card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">登录趋势</h3>
-            <p class="card-subtitle">近 7 天每日登录次数</p>
+            <h3 class="card-title">{{ t('dashboard.loginTrend') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.loginTrendSubtitle') }}</p>
           </div>
-          <span class="chart-legend"><i></i>登录次数</span>
+          <span class="chart-legend"><i></i>{{ t('dashboard.loginCount') }}</span>
         </div>
         <div class="trend-wrapper">
-          <svg class="trend-svg" viewBox="0 0 640 220" role="img" aria-label="近7天登录趋势">
+          <svg class="trend-svg" viewBox="0 0 640 220" role="img" :aria-label="t('dashboard.chartAria')">
             <defs>
               <linearGradient id="trendArea" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#409EFF" stop-opacity="0.28" />
@@ -121,7 +121,7 @@
             />
             <g v-for="point in chart.points" :key="point.label">
               <circle :cx="point.x" :cy="point.y" r="4" fill="var(--app-bg-container)" stroke="#409EFF" stroke-width="2">
-                <title>{{ point.label }}：{{ point.value }} 次</title>
+                <title>{{ t('dashboard.pointTitle', { label: point.label, value: point.value }) }}</title>
               </circle>
               <text :x="point.x" :y="point.y - 11" text-anchor="middle" class="point-value">
                 {{ point.value }}
@@ -137,37 +137,37 @@
       <div class="card overview-card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">运行概览</h3>
-            <p class="card-subtitle">关键指标一览</p>
+            <h3 class="card-title">{{ t('dashboard.overview') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.overviewSubtitle') }}</p>
           </div>
         </div>
         <ul class="overview-list">
           <li>
             <span class="overview-dot dot-blue"></span>
-            <span class="overview-name">定时任务</span>
-            <span class="overview-value">{{ data.enabledJobs }} / {{ data.totalJobs }} 启用</span>
+            <span class="overview-name">{{ t('dashboard.jobs') }}</span>
+            <span class="overview-value">{{ t('dashboard.jobsEnabled', { enabled: data.enabledJobs, total: data.totalJobs }) }}</span>
           </li>
           <li>
             <span class="overview-dot dot-red"></span>
-            <span class="overview-name">近 7 天失败操作</span>
+            <span class="overview-name">{{ t('dashboard.failedOperations') }}</span>
             <span class="overview-value" :class="{ danger: data.failedOperations > 0 }">
-              {{ data.failedOperations }} 次
+              {{ t('dashboard.times', { count: data.failedOperations }) }}
             </span>
           </li>
           <li>
             <span class="overview-dot dot-green"></span>
-            <span class="overview-name">平均在线时长</span>
+            <span class="overview-name">{{ t('dashboard.avgLoginTime') }}</span>
             <span class="overview-value">{{ data.avgLoginTime }}</span>
           </li>
           <li>
             <span class="overview-dot dot-orange"></span>
-            <span class="overview-name">今日操作</span>
-            <span class="overview-value">{{ data.todayOperations }} 次</span>
+            <span class="overview-name">{{ t('dashboard.todayOperations') }}</span>
+            <span class="overview-value">{{ t('dashboard.times', { count: data.todayOperations }) }}</span>
           </li>
           <li>
             <span class="overview-dot dot-purple"></span>
-            <span class="overview-name">公告待读</span>
-            <span class="overview-value">{{ data.unreadNotices }} 条</span>
+            <span class="overview-name">{{ t('dashboard.noticeUnread') }}</span>
+            <span class="overview-value">{{ t('dashboard.items', { count: data.unreadNotices }) }}</span>
           </li>
         </ul>
       </div>
@@ -177,8 +177,8 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">操作模块分布</h3>
-            <p class="card-subtitle">近 7 天各模块操作次数</p>
+            <h3 class="card-title">{{ t('dashboard.moduleDistribution') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.moduleSubtitle') }}</p>
           </div>
         </div>
         <div v-if="data.operationModules.length" class="module-list">
@@ -193,14 +193,14 @@
             <span class="module-value">{{ item.value }}</span>
           </div>
         </div>
-        <el-empty v-else description="暂无操作数据" :image-size="72" />
+        <el-empty v-else :description="t('dashboard.noOperationData')" :image-size="72" />
       </div>
 
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">最近操作</h3>
-            <p class="card-subtitle">最新 5 条操作记录</p>
+            <h3 class="card-title">{{ t('dashboard.recentOperations') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.recentSubtitle') }}</p>
           </div>
         </div>
         <ul v-if="data.recentOperations.length" class="operation-list">
@@ -213,18 +213,18 @@
               </p>
             </div>
             <el-tag :type="item.success === 1 ? 'success' : 'danger'" size="small">
-              {{ item.success === 1 ? '成功' : '失败' }}
+              {{ item.success === 1 ? t('dashboard.success') : t('dashboard.failed') }}
             </el-tag>
           </li>
         </ul>
-        <el-empty v-else description="暂无操作记录" :image-size="72" />
+        <el-empty v-else :description="t('dashboard.noOperationRecords')" :image-size="72" />
       </div>
 
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">最新公告</h3>
-            <p class="card-subtitle">已发布的公告</p>
+            <h3 class="card-title">{{ t('dashboard.latestNotices') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.latestNoticesSubtitle') }}</p>
           </div>
         </div>
         <ul v-if="data.latestNotices.length" class="notice-list">
@@ -235,13 +235,13 @@
             @click="openNotice(notice)"
           >
             <div class="notice-line">
-              <el-tag v-if="notice.pinned === 1" type="danger" size="small" class="notice-pin">置顶</el-tag>
+              <el-tag v-if="notice.pinned === 1" type="danger" size="small" class="notice-pin">{{ t('dashboard.pinned') }}</el-tag>
               <span class="notice-title">{{ notice.title }}</span>
             </div>
             <span class="notice-time">{{ formatNoticeTime(notice.publishTime) }}</span>
           </li>
         </ul>
-        <el-empty v-else description="暂无公告" :image-size="72" />
+        <el-empty v-else :description="t('dashboard.noNotices')" :image-size="72" />
       </div>
     </section>
 
@@ -258,9 +258,13 @@ import { useRouter } from 'vue-router'
 import { User, OfficeBuilding, FolderOpened, Message } from '@element-plus/icons-vue'
 import { getDashboardApi } from '@/api/dashboard'
 import { useUserStore } from '@/stores/user'
+import { useSiteStore } from '@/stores/site'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const userStore = useUserStore()
+const siteStore = useSiteStore()
+const { t } = useI18n()
 
 const data = ref({
   totalUsers: 0,
@@ -276,7 +280,7 @@ const data = ref({
   todayLogin: 0,
   todayOperations: 0,
   failedOperations: 0,
-  avgLoginTime: '0分钟',
+  avgLoginTime: '—',
   loginTrend: [],
   operationModules: [],
   recentOperations: [],
@@ -290,21 +294,33 @@ const moduleColors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#9254DE', '#3
 
 const displayName = computed(() => {
   const info = userStore.userInfo || {}
-  return info.realName || info.username || '管理员'
+  return info.realName || info.username || t('dashboard.admin')
 })
 
-const now = new Date()
-const dateText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
-const weekdayText = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()]
+const dateText = computed(() => {
+  const now = new Date()
+  if (siteStore.locale === 'en') {
+    return now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  }
+  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
+})
+
+const weekdayText = computed(() =>
+  new Date().toLocaleDateString(siteStore.locale === 'en' ? 'en-US' : 'zh-CN', { weekday: 'short' })
+)
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 6) return '凌晨好'
-  if (hour < 12) return '上午好'
-  if (hour < 14) return '中午好'
-  if (hour < 18) return '下午好'
-  return '晚上好'
+  if (hour < 6) return t('dashboard.greetingDawn')
+  if (hour < 12) return t('dashboard.greetingMorning')
+  if (hour < 14) return t('dashboard.greetingNoon')
+  if (hour < 18) return t('dashboard.greetingAfternoon')
+  return t('dashboard.greetingEvening')
 })
+
+const greetingText = computed(() =>
+  `${greeting.value}${siteStore.locale === 'en' ? ', ' : '，'}${displayName.value}`
+)
 
 const chart = computed(() => {
   const list = data.value.loginTrend || []

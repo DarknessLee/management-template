@@ -1,15 +1,15 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">登录日志</h2>
-      <span class="page-tip">记录登录与退出时间，未退出显示在线</span>
+      <h2 class="page-title">{{ t('loginLogs.title') }}</h2>
+      <span class="page-tip">{{ t('loginLogs.tip') }}</span>
     </div>
 
     <div class="card">
       <div class="search-bar">
         <el-input
           v-model="searchForm.username"
-          placeholder="登录名"
+          :placeholder="t('loginLogs.usernamePlaceholder')"
           clearable
           class="keyword-input"
           @keyup.enter="handleSearch"
@@ -17,34 +17,34 @@
         <el-date-picker
           v-model="timeRange"
           type="datetimerange"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
+          :start-placeholder="t('loginLogs.startTime')"
+          :end-placeholder="t('loginLogs.endTime')"
           value-format="YYYY-MM-DD HH:mm:ss"
           class="time-range"
         />
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
+        <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
 
       <el-table :data="logList" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="登录名" width="140" />
-        <el-table-column prop="loginTime" label="登录时间" width="180" />
-        <el-table-column label="退出时间" width="180">
+        <el-table-column prop="id" :label="t('loginLogs.columns.id')" width="80" />
+        <el-table-column prop="username" :label="t('loginLogs.columns.username')" width="140" />
+        <el-table-column prop="loginTime" :label="t('loginLogs.columns.loginTime')" width="180" />
+        <el-table-column :label="t('loginLogs.columns.logoutTime')" width="180">
           <template #default="scope">
             <span v-if="scope.row.logoutTime">{{ scope.row.logoutTime }}</span>
-            <span v-else class="online-text">在线中</span>
+            <span v-else class="online-text">{{ t('loginLogs.onlineNow') }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="在线时长">
+        <el-table-column :label="t('loginLogs.columns.duration')">
           <template #default="scope">
             {{ formatDuration(scope.row) }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column :label="t('loginLogs.columns.status')" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.logoutTime ? 'info' : 'success'" size="small">
-              {{ scope.row.logoutTime ? '已退出' : '在线' }}
+              {{ scope.row.logoutTime ? t('loginLogs.loggedOut') : t('loginLogs.online') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -68,6 +68,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { getLoginLogsApi } from '@/api/loginLog'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const logList = ref([])
 const timeRange = ref([])
@@ -132,14 +135,14 @@ function formatDuration(row) {
   const end = new Date(row.logoutTime.replace(/-/g, '/'))
   const seconds = Math.max(0, Math.floor((end - start) / 1000))
   if (seconds < 60) {
-    return `${seconds}秒`
+    return t('loginLogs.seconds', { count: seconds })
   }
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) {
-    return `${minutes}分钟`
+    return t('loginLogs.minutes', { count: minutes })
   }
   const hours = Math.floor(minutes / 60)
-  return `${hours}小时${minutes % 60}分`
+  return t('loginLogs.hoursMinutes', { hours, minutes: minutes % 60 })
 }
 </script>
 

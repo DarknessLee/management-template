@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">用户管理</h2>
+      <h2 class="page-title">{{ t('users.title') }}</h2>
       <div class="header-actions">
-        <el-button v-permission="'users:add'" @click="openImportDialog">导入用户</el-button>
-        <el-button v-permission="'users:view'" @click="exportUsers">导出</el-button>
+        <el-button v-permission="'users:add'" @click="openImportDialog">{{ t('users.import') }}</el-button>
+        <el-button v-permission="'users:view'" @click="exportUsers">{{ t('users.export') }}</el-button>
         <el-button v-permission="'users:add'" type="primary" @click="openAddDialog">
           <el-icon><component :is="icons.Plus" /></el-icon>
-          新增用户
+          {{ t('users.add') }}
         </el-button>
       </div>
     </div>
@@ -16,46 +16,46 @@
       <div class="search-bar">
         <el-input 
           v-model="searchKeyword" 
-          placeholder="请输入用户名、姓名或邮箱"
+          :placeholder="t('users.searchPlaceholder')"
           :prefix-icon="icons.Search"
           clearable
           @keyup.enter="loadUsers"
         />
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
+        <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
 
       <el-table :data="userList" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="realName" label="姓名" />
-        <el-table-column prop="deptName" label="部门" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="phone" label="手机号" />
-        <el-table-column prop="role" label="角色">
+        <el-table-column prop="username" :label="t('users.columns.username')" />
+        <el-table-column prop="realName" :label="t('users.columns.realName')" />
+        <el-table-column prop="deptName" :label="t('users.columns.dept')" />
+        <el-table-column prop="email" :label="t('users.columns.email')" />
+        <el-table-column prop="phone" :label="t('users.columns.phone')" />
+        <el-table-column prop="role" :label="t('users.columns.role')">
           <template #default="scope">
             <el-tag :type="getRoleType(scope.row.role)">
               {{ getRoleName(scope.row.role) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="status" :label="t('users.columns.status')">
           <template #default="scope">
             <el-switch 
               :model-value="scope.row.status === 1" 
               inline-prompt
               :width="52"
-              :active-text="dictLabel(userStatusOptions, 1)"
-              :inactive-text="dictLabel(userStatusOptions, 0)"
+              :active-text="statusText(1)"
+              :inactive-text="statusText(0)"
               :disabled="!canEdit"
               @change="toggleStatus(scope.row)"
             />
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" />
-        <el-table-column v-if="canOperate" label="操作" width="300">
+        <el-table-column prop="createTime" :label="t('users.columns.createTime')" />
+        <el-table-column v-if="canOperate" :label="t('users.columns.operation')" width="300">
           <template #default="scope">
-            <el-button v-permission="'users:edit'" size="small" @click="openEditDialog(scope.row)">编辑</el-button>
+            <el-button v-permission="'users:edit'" size="small" @click="openEditDialog(scope.row)">{{ t('users.edit') }}</el-button>
             <el-button
               v-if="scope.row.id !== userStore.userInfo?.id"
               v-permission="'users:edit'"
@@ -63,9 +63,9 @@
               type="warning"
               @click="kickoutUser(scope.row)"
             >
-              强制下线
+              {{ t('users.kickout') }}
             </el-button>
-            <el-button v-permission="'users:delete'" size="small" type="danger" @click="deleteUser(scope.row)">删除</el-button>
+            <el-button v-permission="'users:delete'" size="small" type="danger" @click="deleteUser(scope.row)">{{ t('users.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -83,15 +83,15 @@
       </div>
     </div>
 
-    <el-dialog title="导入用户" v-model="importDialogVisible" width="560px" @closed="resetImport">
+    <el-dialog :title="t('users.import')" v-model="importDialogVisible" width="560px" @closed="resetImport">
       <el-alert
-        title="请先下载模板，按表头填写后上传 .xlsx 文件；失败的行不影响其他行导入。"
+        :title="t('users.importTip')"
         type="info"
         :closable="false"
         show-icon
       />
       <div class="template-line">
-        <el-button link type="primary" @click="downloadTemplate">下载导入模板</el-button>
+        <el-button link type="primary" @click="downloadTemplate">{{ t('users.downloadTemplate') }}</el-button>
       </div>
       <el-upload
         ref="importUploadRef"
@@ -101,15 +101,15 @@
         :on-change="handleImportFileChange"
         :on-remove="handleImportFileRemove"
       >
-        <el-button>选择文件</el-button>
+        <el-button>{{ t('users.selectFile') }}</el-button>
         <template #tip>
-          <div class="el-upload__tip">仅支持 .xlsx，角色编码需与角色管理中的编码一致</div>
+          <div class="el-upload__tip">{{ t('users.importFileTip') }}</div>
         </template>
       </el-upload>
 
       <div v-if="importResult" class="import-result">
         <el-alert
-          :title="`共 ${importResult.total} 行，成功 ${importResult.success} 行，失败 ${importResult.failed} 行`"
+          :title="t('users.importSummary', { total: importResult.total, success: importResult.success, failed: importResult.failed })"
           :type="importResult.failed > 0 ? 'warning' : 'success'"
           :closable="false"
           show-icon
@@ -122,14 +122,14 @@
           max-height="240"
           class="error-table"
         >
-          <el-table-column prop="row" label="行号" width="80" />
-          <el-table-column prop="message" label="失败原因" />
+          <el-table-column prop="row" :label="t('users.rowNo')" width="80" />
+          <el-table-column prop="message" :label="t('users.failReason')" />
         </el-table>
       </div>
 
       <template #footer>
-        <el-button @click="importDialogVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
+        <el-button @click="importDialogVisible = false">{{ t('common.close') }}</el-button>
+        <el-button type="primary" :loading="importing" @click="submitImport">{{ t('users.startImport') }}</el-button>
       </template>
     </el-dialog>
 
@@ -139,27 +139,27 @@
       width="500px"
     >
       <el-form ref="userFormRef" :model="userForm" :rules="formRules" label-width="100px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="userForm.username" placeholder="请输入用户名" />
+        <el-form-item :label="t('users.form.username')" prop="username">
+          <el-input v-model="userForm.username" :placeholder="t('users.usernamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="姓名" prop="realName">
-          <el-input v-model="userForm.realName" placeholder="请输入姓名" />
+        <el-form-item :label="t('users.form.realName')" prop="realName">
+          <el-input v-model="userForm.realName" :placeholder="t('users.realNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
+        <el-form-item :label="t('users.form.password')" prop="password">
           <el-input 
             v-model="userForm.password" 
             type="password" 
-            :placeholder="isEdit ? '留空表示不修改密码' : '请输入密码'" 
+            :placeholder="isEdit ? t('users.passwordEditPlaceholder') : t('users.passwordPlaceholder')" 
           />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="userForm.email" type="email" placeholder="请输入邮箱" />
+        <el-form-item :label="t('users.form.email')" prop="email">
+          <el-input v-model="userForm.email" type="email" :placeholder="t('users.emailPlaceholder')" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="userForm.phone" placeholder="请输入手机号" />
+        <el-form-item :label="t('users.form.phone')" prop="phone">
+          <el-input v-model="userForm.phone" :placeholder="t('users.phonePlaceholder')" />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="userForm.role" placeholder="请选择角色">
+        <el-form-item :label="t('users.form.role')" prop="role">
+          <el-select v-model="userForm.role" :placeholder="t('users.rolePlaceholder')">
             <el-option 
               v-for="role in roleOptions" 
               :key="role.value" 
@@ -168,7 +168,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="所属部门">
+        <el-form-item :label="t('users.form.dept')">
           <el-tree-select
             v-model="userForm.deptId"
             :data="deptTree"
@@ -176,14 +176,14 @@
             node-key="id"
             check-strictly
             clearable
-            placeholder="请选择部门"
+            :placeholder="t('users.deptPlaceholder')"
             style="width: 100%;"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveUser">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="saveUser">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -196,15 +196,27 @@ import { Plus, Search } from '@element-plus/icons-vue'
 import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi, importUsersApi, exportUsersApi, downloadUserTemplateApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
 import { getDeptOptionsApi } from '@/api/dept'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
+import { useSiteStore } from '@/stores/site'
 import { useDictOptions, dictLabel } from '@/utils/dict'
 
 const icons = { Plus, Search }
 
+const { t } = useI18n()
 const userStore = useUserStore()
+const siteStore = useSiteStore()
 // 用户状态由数据字典驱动，可在「数据字典」页维护
 const userStatusOptions = useDictOptions('user_status',
   [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }], Number)
+
+// 状态文案：中文沿用数据字典，英文使用内置词条
+function statusText(value) {
+  if (siteStore.locale === 'en') {
+    return t(value === 1 ? 'common.enabled' : 'common.disabled')
+  }
+  return dictLabel(userStatusOptions, value)
+}
 // 没有任何操作权限时整列隐藏，避免留下一列空白按钮
 const canEdit = computed(() => userStore.permissions.includes('users:edit'))
 const canOperate = computed(() => canEdit.value || userStore.permissions.includes('users:delete'))
@@ -212,8 +224,8 @@ const canOperate = computed(() => canEdit.value || userStore.permissions.include
 const userList = ref([])
 const searchKeyword = ref('')
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增用户')
 const isEdit = ref(false)
+const dialogTitle = computed(() => isEdit.value ? t('users.editTitle') : t('users.addTitle'))
 const userFormRef = ref(null)
 const roleOptions = ref([])
 const deptOptions = ref([])
@@ -239,26 +251,26 @@ const userForm = reactive({
 
 const formRules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: t('users.usernameRequired'), trigger: 'blur' }
   ],
   realName: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
+    { required: true, message: t('users.realNameRequired'), trigger: 'blur' }
   ],
   password: isEdit.value
     ? []
     : [
-        { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能少于 6 位', trigger: 'blur' }
+        { required: true, message: t('users.passwordRequired'), trigger: 'blur' },
+        { min: 6, message: t('users.passwordLength'), trigger: 'blur' }
       ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱', trigger: 'blur' }
+    { required: true, message: t('users.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('users.emailInvalid'), trigger: 'blur' }
   ],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' }
+    { required: true, message: t('users.phoneRequired'), trigger: 'blur' }
   ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: true, message: t('users.roleRequired'), trigger: 'change' }
   ]
 }))
 
@@ -343,14 +355,12 @@ function resetSearch() {
 
 function openAddDialog() {
   isEdit.value = false
-  dialogTitle.value = '新增用户'
   resetForm()
   dialogVisible.value = true
 }
 
 function openEditDialog(row) {
   isEdit.value = true
-  dialogTitle.value = '编辑用户'
   Object.assign(userForm, {
     id: row.id,
     username: row.username,
@@ -401,7 +411,7 @@ async function saveUser() {
     } else {
       await createUserApi(payload)
     }
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+    ElMessage.success(isEdit.value ? t('common.updateSuccess') : t('common.createSuccess'))
     dialogVisible.value = false
     loadUsers()
   } catch (error) {
@@ -414,7 +424,7 @@ async function toggleStatus(row) {
   try {
     await updateUserApi(row.id, { status: newStatus })
     row.status = newStatus
-    ElMessage.success('状态已更新')
+    ElMessage.success(t('common.statusUpdated'))
   } catch (error) {
     // 失败时开关保持原状
   }
@@ -422,14 +432,14 @@ async function toggleStatus(row) {
 
 async function deleteUser(row) {
   try {
-    await ElMessageBox.confirm('确定要删除该用户吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('users.deleteConfirm'), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deleteUserApi(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     // 删除当前页最后一条时回退一页，避免出现空表格
     if (userList.value.length === 1 && pagination.page > 1) {
       pagination.page -= 1
@@ -443,8 +453,8 @@ async function deleteUser(row) {
 async function kickoutUser(row) {
   try {
     await ElMessageBox.confirm(
-      `确定让「${row.username}」的全部登录会话立即失效吗？该用户需要重新登录。`,
-      '强制下线',
+      t('users.kickoutConfirm', { name: row.username }),
+      t('users.kickout'),
       { type: 'warning' }
     )
   } catch (error) {
@@ -453,7 +463,7 @@ async function kickoutUser(row) {
 
   try {
     const res = await kickoutUserApi(row.id)
-    ElMessage.success(`已下线 ${res.data} 个会话`)
+    ElMessage.success(t('users.kickedOut', { count: res.data }))
   } catch (error) {
     // 拦截器已提示
   }
@@ -507,7 +517,7 @@ async function downloadTemplate() {
 
 async function submitImport() {
   if (!importFile.value) {
-    ElMessage.warning('请先选择要导入的文件')
+    ElMessage.warning(t('users.importNoFile'))
     return
   }
 
@@ -519,7 +529,7 @@ async function submitImport() {
       loadUsers()
     }
     if (res.data.failed === 0) {
-      ElMessage.success(`导入成功 ${res.data.success} 条`)
+      ElMessage.success(t('users.importSuccess', { count: res.data.success }))
     }
   } catch (error) {
     // 拦截器已提示

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">文件管理</h2>
+      <h2 class="page-title">{{ t('files.title') }}</h2>
       <div class="header-actions">
         <el-button
           v-if="canEdit"
@@ -10,7 +10,7 @@
           :disabled="!selectedIds.length"
           @click="removeSelected"
         >
-          批量删除{{ selectedIds.length ? ` (${selectedIds.length})` : '' }}
+          {{ t('files.batchDelete') }}{{ selectedIds.length ? ` (${selectedIds.length})` : '' }}
         </el-button>
         <el-upload
           v-if="canEdit"
@@ -20,7 +20,7 @@
         >
           <el-button type="primary" :loading="uploading">
             <el-icon><component :is="icons.Upload" /></el-icon>
-            上传文件
+            {{ t('files.upload') }}
           </el-button>
         </el-upload>
       </div>
@@ -30,14 +30,14 @@
       <div class="search-bar">
         <el-input
           v-model="keyword"
-          placeholder="按文件名搜索"
+          :placeholder="t('files.searchPlaceholder')"
           clearable
           class="keyword-input"
           @keyup.enter="handleSearch"
         />
         <el-select
           v-model="typeFilter"
-          placeholder="全部类型"
+          :placeholder="t('files.allTypes')"
           clearable
           class="type-select"
           @change="handleSearch"
@@ -49,8 +49,8 @@
             :value="item.value"
           />
         </el-select>
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+        <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
+        <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
 
       <el-table
@@ -62,30 +62,30 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column v-if="canEdit" type="selection" width="46" />
-        <el-table-column prop="originalName" label="文件名" min-width="260" show-overflow-tooltip />
-        <el-table-column label="类型" width="90">
+        <el-table-column prop="originalName" :label="t('files.columns.name')" min-width="260" show-overflow-tooltip />
+        <el-table-column :label="t('files.columns.type')" width="90">
           <template #default="scope">
             <el-tag size="small">{{ fileExtension(scope.row.originalName) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="大小" width="110">
+        <el-table-column :label="t('files.columns.size')" width="110">
           <template #default="scope">{{ formatSize(scope.row.size) }}</template>
         </el-table-column>
-        <el-table-column label="上传人" width="120">
+        <el-table-column :label="t('files.columns.uploader')" width="120">
           <template #default="scope">{{ scope.row.uploaderName || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="createTime" label="上传时间" width="180" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column prop="createTime" :label="t('files.columns.createTime')" width="180" />
+        <el-table-column :label="t('files.columns.operation')" width="220" fixed="right">
           <template #default="scope">
-            <el-button v-if="canPreview(scope.row)" size="small" @click="previewFile(scope.row)">预览</el-button>
-            <el-button size="small" @click="downloadFile(scope.row)">下载</el-button>
+            <el-button v-if="canPreview(scope.row)" size="small" @click="previewFile(scope.row)">{{ t('files.preview') }}</el-button>
+            <el-button size="small" @click="downloadFile(scope.row)">{{ t('files.download') }}</el-button>
             <el-button
               v-if="canEdit"
               size="small"
               type="danger"
               @click="removeFile(scope.row)"
             >
-              删除
+              {{ t('files.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -103,7 +103,7 @@
         />
       </div>
 
-      <p class="tip">支持图片、PDF、Office 文档、文本和压缩包，单个文件不超过 20MB。</p>
+      <p class="tip">{{ t('files.tip') }}</p>
     </div>
 
     <el-dialog
@@ -116,13 +116,13 @@
         v-if="previewKind === 'image'"
         :src="previewUrl"
         class="preview-image"
-        alt="文件预览"
+        :alt="t('files.previewAlt')"
       />
       <iframe
         v-else
         :src="previewUrl"
         class="preview-frame"
-        title="PDF 预览"
+        :title="t('files.pdfPreview')"
       />
     </el-dialog>
   </div>
@@ -134,23 +134,25 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { getFilesApi, uploadFileApi, deleteFileApi, deleteFilesApi, downloadFileApi, previewFileApi } from '@/api/file'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
 
 const icons = { Upload }
 
 const acceptTypes = '.png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.zip,.rar,.7z'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const canEdit = computed(() => userStore.permissions.includes('file:edit'))
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
 
-const typeOptions = [
-  { label: '图片', value: 'image' },
-  { label: 'PDF', value: 'pdf' },
-  { label: 'Office', value: 'office' },
-  { label: '文本', value: 'text' },
-  { label: '压缩包', value: 'archive' }
-]
+const typeOptions = computed(() => [
+  { label: t('files.typeImage'), value: 'image' },
+  { label: t('files.typePdf'), value: 'pdf' },
+  { label: t('files.typeOffice'), value: 'office' },
+  { label: t('files.typeText'), value: 'text' },
+  { label: t('files.typeArchive'), value: 'archive' }
+])
 
 const files = ref([])
 const keyword = ref('')
@@ -219,14 +221,14 @@ function handleCurrentChange(page) {
 
 async function handleUpload({ file }) {
   if (file.size > 20 * 1024 * 1024) {
-    ElMessage.warning('文件大小不能超过 20MB')
+    ElMessage.warning(t('files.sizeLimit'))
     return
   }
 
   uploading.value = true
   try {
     await uploadFileApi(file)
-    ElMessage.success('上传成功')
+    ElMessage.success(t('files.uploadSuccess'))
     pagination.page = 1
     loadFiles()
   } catch (error) {
@@ -247,14 +249,14 @@ async function downloadFile(row) {
 
 async function removeFile(row) {
   try {
-    await ElMessageBox.confirm(`确定要删除文件「${row.originalName}」吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('files.deleteConfirm', { name: row.originalName }), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deleteFileApi(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     selectedIds.value = []
     loadFiles()
   } catch (error) {
@@ -268,14 +270,14 @@ async function removeSelected() {
     return
   }
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${ids.length} 个文件吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('files.batchDeleteConfirm', { count: ids.length }), t('common.confirmTitle'), { type: 'warning' })
   } catch (error) {
     return
   }
 
   try {
     await deleteFilesApi(ids)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.deleteSuccess'))
     selectedIds.value = []
     loadFiles()
   } catch (error) {
@@ -339,7 +341,7 @@ function saveBlob(response, fallbackName) {
 
 function fileExtension(name) {
   if (!name || !name.includes('.')) {
-    return '文件'
+    return t('files.file')
   }
   return name.substring(name.lastIndexOf('.') + 1).toUpperCase()
 }
