@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import i18n from '@/locales'
+import { getToken, refreshToken, removeToken } from '@/utils/token'
 
 const service = axios.create({
   baseURL: '/api',
@@ -9,7 +10,7 @@ const service = axios.create({
 
 /** 401 时只清理本地状态并跳登录页，避免再调 logout 接口造成递归 */
 function forceLogout() {
-  localStorage.removeItem('token')
+  removeToken()
   if (window.location.pathname !== '/login') {
     window.location.href = '/login'
   }
@@ -17,8 +18,8 @@ function forceLogout() {
 
 service.interceptors.request.use(
   (config) => {
-    // 直接从 localStorage 取 token，避免 pinia store 与 request 循环依赖
-    const token = localStorage.getItem('token')
+    // 直接读本地存储取 token，避免 pinia store 与 request 循环依赖
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -31,6 +32,11 @@ service.interceptors.request.use(
 
 service.interceptors.response.use(
   (response) => {
+    // 后端在会话临期时通过响应头下发新 token，写回原存储位置即可无感续期
+    const renewed = response.headers['x-new-token']
+    if (renewed) {
+      refreshToken(renewed)
+    }
     // 文件下载直接返回完整响应，交给调用方处理 Blob 与文件名
     if (response.config.responseType === 'blob') {
       return response

@@ -24,20 +24,31 @@ public class JwtUtil {
     @Value("${app.jwt.expire-minutes}")
     private long expireMinutes;
 
+    /** 勾选「记住我」时的会话有效期（天） */
+    @Value("${app.jwt.remember-days:7}")
+    private long rememberDays;
+
     private SecretKey key() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generate(Long userId, Long loginLogId) {
+    public String generate(Long userId, Long loginLogId, boolean remember) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + expireMinutes * 60 * 1000);
+        Date expiration = new Date(now.getTime() + expireMillis(remember));
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("loginLogId", loginLogId)
+                // 续期时据此判断新的会话应该沿用哪种有效期
+                .claim("rm", remember)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    private long expireMillis(boolean remember) {
+        long minutes = remember ? Math.max(rememberDays, 1) * 24 * 60 : expireMinutes;
+        return minutes * 60 * 1000;
     }
 
     public Claims parse(String token) {
@@ -50,5 +61,9 @@ public class JwtUtil {
 
     public long getExpireMinutes() {
         return expireMinutes;
+    }
+
+    public long getRememberDays() {
+        return rememberDays;
     }
 }

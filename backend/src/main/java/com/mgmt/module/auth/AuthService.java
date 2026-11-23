@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 public class AuthService {
 
     private static final String FAIL_KEY_PREFIX = "mgmt:auth:login-fail:";
+    /** 剩余有效期不足该值时自动续期 */
+    private static final long RENEW_BEFORE_SECONDS = 600;
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -95,13 +97,10 @@ public class AuthService {
         log.setLoginTime(LocalDateTime.now());
         loginLogMapper.insert(log);
 
-        String token = jwtUtil.generate(user.getId(), log.getId());
-        // 会话有效期取「设置中的登录超时」与 JWT 有效期中的较小值
+        String token = jwtUtil.generate(user.getId(), log.getId(), Boolean.TRUE.equals(request.getRememberMe()));
+        // 会话有效期取「设置中的登录超时」与 JWT 有效期中的较小值；记住我时改用 remember-days
         int loginTimeout = intValue(security, "loginTimeout", (int) jwtUtil.getExpireMinutes());
-        long ttlMinutes = loginTimeout > 0
-                ? Math.min(jwtUtil.getExpireMinutes(), loginTimeout)
-                : jwtUtil.getExpireMinutes();
-        Duration ttl = Duration.ofMinutes(Math.max(ttlMinutes, 1));
+        Duration ttl = sessionTtl(Boolean.TRUE.equals(request.getRememberMe()), loginTimeout);
         redisTemplate.opsForValue().set(
                 AuthInterceptor.TOKEN_KEY_PREFIX + token,
                 String.valueOf(user.getId()),
@@ -121,6 +120,54 @@ public class AuthService {
         redisTemplate.expire(onlineKey, ttl);
 
         return new LoginResponse(token);
+    }
+
+    /**
+     * 临期自动续期：剩余有效期不足 {@link #RENEW_BEFORE_SECONDS} 时签发新 token，
+     * 并把 Redis 中的白名单、用户会话集合、在线信息交接过去；无需续期时返回 null。
+     */
+    public String renewIfNeeded(String token, Long userId) {
+        Long remaining = redisTemplate.getExpire(AuthInterceptor.TOKEN_KEY_PREFIX + token, TimeUnit.SECONDS);
+        if (remaining == null || remaining < 0 || remaining > RENEW_BEFORE_SECONDS) {
+            return null;
+        }
+        Claims claims = jwtUtil.parse(token);
+        boolean remember = Boolean.TRUE.equals(claims.get("rm", Boolean.class));
+        Object loginLogId = claims.get("loginLogId");
+        String newToken = jwtUtil.generate(userId,
+                loginLogId == null ? null : Long.valueOf(loginLogId.toString()), remember);
+
+        int loginTimeout = intValue(settingService.security(), "loginTimeout", (int) jwtUtil.getExpireMinutes());
+        Duration ttl = sessionTtl(remember, loginTimeout);
+
+        redisTemplate.opsForValue().set(AuthInterceptor.TOKEN_KEY_PREFIX + newToken, String.valueOf(userId), ttl);
+        String sessionKey = AuthInterceptor.USER_TOKENS_KEY_PREFIX + userId;
+        redisTemplate.opsForSet().add(sessionKey, newToken);
+        redisTemplate.expire(sessionKey, ttl);
+
+        // 登录时间与来源 IP 原样交接，避免续期后在线用户列表丢失会话
+        String oldOnlineKey = AuthInterceptor.ONLINE_KEY_PREFIX + token;
+        Map<Object, Object> online = redisTemplate.opsForHash().entries(oldOnlineKey);
+        if (!online.isEmpty()) {
+            redisTemplate.opsForHash().putAll(AuthInterceptor.ONLINE_KEY_PREFIX + newToken, online);
+            redisTemplate.expire(AuthInterceptor.ONLINE_KEY_PREFIX + newToken, ttl);
+        }
+        redisTemplate.delete(oldOnlineKey);
+
+        // 旧 token 立即失效，并从该用户的会话集合中移除
+        redisTemplate.delete(AuthInterceptor.TOKEN_KEY_PREFIX + token);
+        redisTemplate.opsForSet().remove(sessionKey, token);
+        return newToken;
+    }
+
+    private Duration sessionTtl(boolean remember, int loginTimeout) {
+        if (remember) {
+            return Duration.ofDays(Math.max(jwtUtil.getRememberDays(), 1));
+        }
+        long ttlMinutes = loginTimeout > 0
+                ? Math.min(jwtUtil.getExpireMinutes(), loginTimeout)
+                : jwtUtil.getExpireMinutes();
+        return Duration.ofMinutes(Math.max(ttlMinutes, 1));
     }
 
     public UserInfoVO userInfo() {

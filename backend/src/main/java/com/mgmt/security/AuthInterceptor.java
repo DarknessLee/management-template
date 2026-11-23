@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgmt.common.I18n;
 import com.mgmt.common.Result;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.auth.AuthService;
 import com.mgmt.module.role.PermissionService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,19 @@ public class AuthInterceptor implements HandlerInterceptor {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final PermissionService permissionService;
+    private final AuthService authService;
+
+    /** 会话临期时续期，新 token 通过响应头交给前端；续期失败不影响本次请求 */
+    private void renewIfNeeded(String token, Long userId, HttpServletResponse response) {
+        try {
+            String newToken = authService.renewIfNeeded(token, userId);
+            if (newToken != null) {
+                response.setHeader("X-New-Token", newToken);
+            }
+        } catch (Exception ignored) {
+            // 续期只是增强能力，出错时继续使用原 token
+        }
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
@@ -62,6 +76,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
 
             UserContext.setUserId(userId);
+            renewIfNeeded(token, userId, response);
             return true;
         } catch (Exception e) {
             return unauthorized(response);

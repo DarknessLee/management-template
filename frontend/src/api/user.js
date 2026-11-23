@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-export function loginApi(username, password, captchaKey, captchaCode) {
+export function loginApi(username, password, captchaKey, captchaCode, rememberMe = false) {
   return request({
     url: '/auth/login',
     method: 'post',
@@ -8,7 +8,8 @@ export function loginApi(username, password, captchaKey, captchaCode) {
       username,
       password,
       captchaKey,
-      captchaCode
+      captchaCode,
+      rememberMe
     }
   })
 }

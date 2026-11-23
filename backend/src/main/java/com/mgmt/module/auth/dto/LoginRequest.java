@@ -17,4 +17,7 @@ public class LoginRequest {
 
     @NotBlank(message = "{validation.captchaCodeRequired}")
     private String captchaCode;
+
+    /** 记住我：为 true 时会话有效期取 remember-days，否则沿用登录超时设置 */
+    private Boolean rememberMe;
 }

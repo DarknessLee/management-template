@@ -37,6 +37,7 @@ export default {
     passwordRequired: '请输入密码',
     passwordLength: '密码长度在6到20个字符',
     captchaRequired: '请输入验证码',
+    rememberMe: '记住我（7 天内免登录）',
     success: '登录成功'
   },
   header: {

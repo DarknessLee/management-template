@@ -37,6 +37,7 @@ export default {
     passwordRequired: 'Please enter password',
     passwordLength: 'Password must be 6 to 20 characters',
     captchaRequired: 'Please enter captcha',
+    rememberMe: 'Remember me for 7 days',
     success: 'Signed in successfully'
   },
   header: {

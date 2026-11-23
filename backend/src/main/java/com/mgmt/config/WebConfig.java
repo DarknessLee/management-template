@@ -57,6 +57,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(allowedOrigin)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
+                // 会话续期时新 token 通过该响应头返回，前端需要能读取
+                .exposedHeaders("X-New-Token")
                 .allowCredentials(true);
     }
 }

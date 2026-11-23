@@ -54,6 +54,9 @@
             <div v-else class="captcha-img captcha-placeholder" @click="loadCaptcha">{{ t('common.loading') }}</div>
           </div>
         </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="loginForm.rememberMe">{{ t('login.rememberMe') }}</el-checkbox>
+        </el-form-item>
         <!-- 让回车也触发登录事件 -->
         <el-form-item>
           <el-button 
@@ -100,7 +103,8 @@ const captchaKey = ref('')
 const loginForm = reactive({
   username: '',
   password: '',
-  captchaCode: ''
+  captchaCode: '',
+  rememberMe: false
 })
 
 // 用 computed 让校验提示跟随语言切换
@@ -146,7 +150,8 @@ async function handleLogin() {
       loginForm.username,
       loginForm.password,
       captchaKey.value,
-      loginForm.captchaCode
+      loginForm.captchaCode,
+      loginForm.rememberMe
     )
     if (ok) {
       ElMessage.success(t('login.success'))
