@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- **认证与安全**：图形验证码登录、JWT + Redis 白名单、退出即失效、在线用户查看与强制下线、操作日志与登录日志。
+- **认证与安全**：图形验证码登录、JWT + Redis 白名单、退出即失效、在线用户查看与强制下线、可配置页面水印（登录人 + 日期）、操作日志与登录日志。
 - **RBAC 权限**：用户、角色、权限点、菜单四级管理；按钮级 `v-permission`；角色支持数据范围（全部 / 本部门 / 本部门及以下 / 仅本人）。
 - **动态菜单**：侧边栏和路由完全由数据库菜单驱动，支持「目录 + 菜单」两级结构，目录自动隐藏无权限子项。
 - **组织与用户**：部门树、用户 Excel 导入导出与模板下载、状态启停、头像与个人中心。
@@ -28,7 +28,7 @@
 management-template/
 ├── frontend/                     # Vue 3 前端
 │   ├── src/api/                  # 接口封装（user/role/menu/dept/dict/notice/job/file/log…）
-│   ├── src/stores/               # Pinia：登录态 user、动态菜单 menu、品牌配置 site
+│   ├── src/stores/               # Pinia：登录态 user、动态菜单 menu、品牌与水印 site
 │   ├── src/layout/               # 布局与多标签页 TagsView
 │   ├── src/router/               # 静态路由 + 根据菜单动态注册子路由
 │   ├── src/directives/           # v-permission 按钮权限指令
@@ -102,7 +102,7 @@ npm run dev
 | 日志 | `GET /api/logs`、`DELETE /api/logs/clean`、`GET /api/login-logs` |
 | 定时任务 | `GET/POST/PUT/DELETE /api/jobs`、`POST /api/jobs/{id}/run`、`GET /api/jobs/{id}/logs` |
 | 文件 | `GET /api/files`、`POST /api/files`、`GET /api/files/{id}/download`、`GET /api/files/{id}/preview`、`DELETE /api/files/batch` |
-| 系统设置 | `GET/PUT /api/settings`、`GET /api/settings/public`（登录页品牌配置，免登录） |
+| 系统设置 | `GET/PUT /api/settings`、`GET /api/settings/public`（登录页品牌与水印开关，免登录） |
 | 监控/在线 | `GET /api/monitor`、`GET /api/online-users`、强制下线 |
 | 个人中心 | `GET/PUT /api/profile`、`PUT /api/profile/password`、`POST /api/profile/avatar` |
 
@@ -120,7 +120,7 @@ npm run dev
 10. **公告已读**：`sys_notice_read` 以 `(notice_id, user_id)` 唯一索引去重；阅读统计与阅读明细都基于该表，未读数 = 已发布公告数 - 当前用户已读数。
 11. **定时任务**：任务通过 `handler_key` 映射到处理器，手动执行与 Cron 执行走同一条链路，统一写入 `sys_job_log`，记录触发方式、成败、耗时与结果。
 12. **文件安全**：上传做扩展名白名单与 20MB 限制；下载使用 attachment，预览使用 inline 并返回真实 MIME，图片/PDF 可直接在弹窗中渲染。
-13. **品牌配置**：`GET /settings/public` 只暴露标题、Logo 等非敏感字段并加入拦截器白名单，登录页无需 token 即可读取；设置保存后前端立即刷新品牌，无需刷新页面。
+13. **品牌配置与水印**：`GET /settings/public` 只暴露标题、Logo、水印开关等非敏感字段并加入拦截器白名单，登录页无需 token 即可读取；设置保存后前端立即刷新品牌与水印，无需刷新页面。水印由 Canvas 生成平铺底图，包含登录人、姓名和日期，`pointer-events: none` 不影响操作。
 14. **字典缓存**：`useDictOptions` 在会话内缓存字典项，接口异常时使用兜底选项，避免每个页面重复请求。
 
 ## 新增模块约定
