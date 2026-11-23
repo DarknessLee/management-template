@@ -60,11 +60,22 @@
           <el-button
             class="notice-btn"
             circle
-            title="切换主题"
+            :title="t('header.toggleTheme')"
             @click="siteStore.toggleTheme()"
           >
             <el-icon><component :is="icons[siteStore.theme === 'dark' ? 'Sunny' : 'Moon']" /></el-icon>
           </el-button>
+          <el-dropdown trigger="click" @command="handleLocaleCommand">
+            <el-button class="notice-btn locale-btn" :title="t('header.toggleLanguage')">
+              {{ siteStore.locale === 'en' ? 'EN' : '中' }}
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh-CN" :disabled="siteStore.locale === 'zh-CN'">简体中文</el-dropdown-item>
+                <el-dropdown-item command="en" :disabled="siteStore.locale === 'en'">English</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-popover
             v-model:visible="noticePopoverVisible"
             placement="bottom-end"
@@ -85,10 +96,10 @@
             </template>
             <div class="notice-panel">
               <div class="notice-panel-header">
-                <span>未读公告</span>
-                <span class="notice-count">{{ unreadNotices.length }} 条</span>
+                <span>{{ t('header.unreadNotices') }}</span>
+                <span class="notice-count">{{ t('header.noticeCount', { count: unreadNotices.length }) }}</span>
               </div>
-              <div v-if="unreadNotices.length === 0" class="notice-empty">暂无未读公告</div>
+              <div v-if="unreadNotices.length === 0" class="notice-empty">{{ t('header.noUnreadNotices') }}</div>
               <div v-else class="notice-list">
                 <div
                   v-for="notice in unreadNotices"
@@ -107,13 +118,13 @@
               <el-avatar :size="28" :src="assetUrl(userStore.userInfo?.avatar)">
                 <el-icon><component :is="icons.User" /></el-icon>
               </el-avatar>
-              <span>{{ userStore.userInfo?.realName || '用户' }}</span>
+              <span>{{ userStore.userInfo?.realName || t('header.user') }}</span>
               <el-icon><component :is="icons.ArrowDown" /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="profile">{{ t('header.profile') }}</el-dropdown-item>
+                <el-dropdown-item command="logout">{{ t('header.logout') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -129,7 +140,7 @@
 
     <el-dialog v-model="noticeDialogVisible" :title="currentNotice.title" width="600px">
       <div class="notice-detail">
-        <p class="notice-detail-time">发布时间：{{ currentNotice.publishTime || '—' }}</p>
+        <p class="notice-detail-time">{{ t('header.publishedAt', { time: currentNotice.publishTime || '—' }) }}</p>
         <p class="notice-detail-content">{{ currentNotice.content }}</p>
       </div>
     </el-dialog>
@@ -141,6 +152,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
@@ -182,6 +194,7 @@ const route = useRoute()
 const userStore = useUserStore()
 const menuStore = useMenuStore()
 const siteStore = useSiteStore()
+const { t } = useI18n()
 
 // 折叠时用品牌名首字作为图标
 const logoLetter = computed(() => (siteStore.config.siteTitle || '后台').slice(0, 1))
@@ -281,9 +294,14 @@ async function handleCommand(command) {
   if (command === 'logout') {
     await userStore.logout()
     resetDynamicRoutes()
-    ElMessage.success('已退出登录')
+    ElMessage.success(t('header.logoutSuccess'))
     router.push('/login')
   }
+}
+
+// 顶栏语言切换：与设置页共用 siteStore，即时生效并写入本地偏好
+function handleLocaleCommand(locale) {
+  siteStore.setLocale(locale)
 }
 
 // 退出时移除动态注册的路由，避免下一个登录用户还能访问上一个用户的页面
@@ -431,6 +449,13 @@ function collectLeafPaths(menus, paths = []) {
 
 .notice-btn:hover {
   background: var(--app-hover-bg-strong);
+}
+
+.locale-btn {
+  width: auto;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .notice-panel-header {

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import i18n from '@/locales'
 
 const service = axios.create({
   baseURL: '/api',
@@ -34,11 +35,11 @@ service.interceptors.response.use(
     }
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
+      ElMessage.error(res.message || i18n.global.t('common.requestFailed'))
       if (res.code === 401) {
         forceLogout()
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      return Promise.reject(new Error(res.message || i18n.global.t('common.requestFailed')))
     }
     // 直接返回响应体 { code, message, data }，页面里少一层 .data
     return res
@@ -47,15 +48,15 @@ service.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        ElMessage.error('登录已过期，请重新登录')
+        ElMessage.error(i18n.global.t('common.sessionExpired'))
         forceLogout()
       } else if (status === 403) {
-        ElMessage.error('没有权限访问')
+        ElMessage.error(i18n.global.t('common.noPermission'))
       } else {
-        ElMessage.error('网络错误，请稍后重试')
+        ElMessage.error(i18n.global.t('common.networkError'))
       }
     } else {
-      ElMessage.error('网络连接失败')
+      ElMessage.error(i18n.global.t('common.networkFailed'))
     }
     return Promise.reject(error)
   }

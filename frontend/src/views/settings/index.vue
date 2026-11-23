@@ -1,36 +1,36 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">系统设置</h2>
+      <h2 class="page-title">{{ t('settings.title') }}</h2>
     </div>
 
     <div class="settings-grid">
       <div class="setting-card">
-        <h3 class="setting-title">系统信息</h3>
+        <h3 class="setting-title">{{ t('settings.systemInfo') }}</h3>
         <div class="info-list">
           <div class="info-item">
-            <span class="info-label">系统名称</span>
+            <span class="info-label">{{ t('settings.siteName') }}</span>
             <span class="info-value">{{ basicForm.siteTitle }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">系统版本</span>
+            <span class="info-label">{{ t('settings.siteVersion') }}</span>
             <span class="info-value">v1.0.0</span>
           </div>
           <div class="info-item">
-            <span class="info-label">技术栈</span>
+            <span class="info-label">{{ t('settings.techStack') }}</span>
             <span class="info-value">Vue3 + Element Plus</span>
           </div>
           <div class="info-item">
-            <span class="info-label">运行环境</span>
+            <span class="info-label">{{ t('settings.runtime') }}</span>
             <span class="info-value">development</span>
           </div>
         </div>
       </div>
 
       <div class="setting-card">
-        <h3 class="setting-title">安全设置</h3>
+        <h3 class="setting-title">{{ t('settings.security') }}</h3>
         <el-form :model="securityForm" label-width="120px">
-          <el-form-item label="登录超时时间">
+          <el-form-item :label="t('settings.loginTimeout')">
             <el-input-number 
               v-model="securityForm.loginTimeout" 
               :min="10" 
@@ -38,10 +38,10 @@
               :step="10"
               style="width: 150px;"
             />
-            <span style="margin-left: 8px;">分钟</span>
-            <span class="setting-hint">会话有效期，超时后需重新登录</span>
+            <span style="margin-left: 8px;">{{ t('settings.minute') }}</span>
+            <span class="setting-hint">{{ t('settings.loginTimeoutHint') }}</span>
           </el-form-item>
-          <el-form-item label="密码有效期">
+          <el-form-item :label="t('settings.passwordExpire')">
             <el-input-number 
               v-model="securityForm.passwordExpire" 
               :min="7" 
@@ -49,13 +49,13 @@
               :step="7"
               style="width: 150px;"
             />
-            <span style="margin-left: 8px;">天</span>
+            <span style="margin-left: 8px;">{{ t('settings.day') }}</span>
           </el-form-item>
-          <el-form-item label="登录失败锁定">
+          <el-form-item :label="t('settings.lockOnFail')">
             <el-switch v-model="securityForm.lockOnFail" />
-            <span class="setting-hint">关闭后不限制登录失败次数</span>
+            <span class="setting-hint">{{ t('settings.lockOnFailHint') }}</span>
           </el-form-item>
-          <el-form-item label="失败锁定次数">
+          <el-form-item :label="t('settings.maxFailCount')">
             <el-input-number 
               v-model="securityForm.maxFailCount" 
               :min="3" 
@@ -63,33 +63,37 @@
               :step="1"
               style="width: 150px;"
             />
-            <span style="margin-left: 8px;">次</span>
-            <span class="setting-hint">达到次数后锁定 15 分钟</span>
+            <span style="margin-left: 8px;">{{ t('settings.times') }}</span>
+            <span class="setting-hint">{{ t('settings.maxFailCountHint') }}</span>
           </el-form-item>
-          <el-form-item label="页面水印">
+          <el-form-item :label="t('settings.watermark')">
             <el-switch v-model="securityForm.watermark" />
-            <span class="setting-hint">开启后全站显示当前用户和日期的半透明水印</span>
+            <span class="setting-hint">{{ t('settings.watermarkHint') }}</span>
           </el-form-item>
         </el-form>
       </div>
 
       <div class="setting-card">
-        <h3 class="setting-title">基础设置</h3>
+        <h3 class="setting-title">{{ t('settings.basic') }}</h3>
         <el-form :model="basicForm" label-width="120px">
-          <el-form-item label="网站标题">
-            <el-input v-model="basicForm.siteTitle" placeholder="请输入网站标题" />
+          <el-form-item :label="t('settings.siteTitle')">
+            <el-input v-model="basicForm.siteTitle" :placeholder="t('settings.siteTitlePlaceholder')" />
           </el-form-item>
-          <el-form-item label="网站Logo">
-            <el-input v-model="basicForm.siteLogo" placeholder="请输入Logo地址" />
+          <el-form-item :label="t('settings.siteLogo')">
+            <el-input v-model="basicForm.siteLogo" :placeholder="t('settings.siteLogoPlaceholder')" />
           </el-form-item>
-          <el-form-item label="默认主题">
-            <el-select v-model="basicForm.defaultTheme" placeholder="请选择主题">
-              <el-option label="明亮主题" value="light" />
-              <el-option label="暗黑主题" value="dark" />
+          <el-form-item :label="t('settings.defaultTheme')">
+            <el-select v-model="basicForm.defaultTheme" :placeholder="t('settings.defaultThemePlaceholder')">
+              <el-option :label="t('settings.themeLight')" value="light" />
+              <el-option :label="t('settings.themeDark')" value="dark" />
             </el-select>
           </el-form-item>
-          <el-form-item label="语言">
-            <el-select v-model="basicForm.language" placeholder="请选择语言">
+          <el-form-item :label="t('settings.language')">
+            <el-select
+              v-model="basicForm.language"
+              :placeholder="t('settings.languagePlaceholder')"
+              @change="handleLanguageChange"
+            >
               <el-option label="中文" value="zh-CN" />
               <el-option label="English" value="en" />
             </el-select>
@@ -98,18 +102,18 @@
       </div>
 
       <div class="setting-card">
-        <h3 class="setting-title">通知设置</h3>
+        <h3 class="setting-title">{{ t('settings.notification') }}</h3>
         <el-form :model="notificationForm" label-width="120px">
-          <el-form-item label="邮件通知">
+          <el-form-item :label="t('settings.emailNotify')">
             <el-switch v-model="notificationForm.emailNotify" />
           </el-form-item>
-          <el-form-item label="短信通知">
+          <el-form-item :label="t('settings.smsNotify')">
             <el-switch v-model="notificationForm.smsNotify" />
           </el-form-item>
-          <el-form-item label="系统通知">
+          <el-form-item :label="t('settings.systemNotify')">
             <el-switch v-model="notificationForm.systemNotify" />
           </el-form-item>
-          <el-form-item label="消息推送">
+          <el-form-item :label="t('settings.pushNotify')">
             <el-switch v-model="notificationForm.pushNotify" />
           </el-form-item>
         </el-form>
@@ -117,15 +121,16 @@
     </div>
 
     <div class="btn-group" style="margin-top: 24px;">
-      <el-button v-permission="'settings:edit'" type="primary" @click="saveSettings">保存设置</el-button>
-      <el-button v-permission="'settings:edit'" @click="resetSettings">重置</el-button>
+      <el-button v-permission="'settings:edit'" type="primary" @click="saveSettings">{{ t('settings.save') }}</el-button>
+      <el-button v-permission="'settings:edit'" @click="resetSettings">{{ t('settings.reset') }}</el-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted, watch } from 'vue'
+import { reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { getSettingsApi, updateSettingsApi } from '@/api/settings'
 import { useSiteStore } from '@/stores/site'
@@ -159,6 +164,7 @@ const notificationForm = reactive({ ...defaultNotification })
 
 const route = useRoute()
 const siteStore = useSiteStore()
+const { t } = useI18n()
 
 onMounted(() => {
   loadSettings()
@@ -180,6 +186,11 @@ async function loadSettings() {
   }
 }
 
+// 语言下拉即时生效并写入本地偏好；这里用 change 而非 watch，避免加载表单时覆盖用户已有偏好
+function handleLanguageChange(language) {
+  siteStore.setLocale(language)
+}
+
 async function saveSettings() {
   try {
     await updateSettingsApi({
@@ -187,8 +198,8 @@ async function saveSettings() {
       basic: { ...basicForm },
       notification: { ...notificationForm }
     })
-    ElMessage.success('设置已保存')
-    // 品牌名称和 Logo 立即同步到登录页、侧边栏和浏览器标题
+    ElMessage.success(t('settings.saved'))
+    // 品牌名称、Logo、主题和语言立即同步到登录页、侧边栏和浏览器标题
     await siteStore.load(true)
     const siteTitle = basicForm.siteTitle || '后台管理系统'
     document.title = route.meta.title ? `${route.meta.title} - ${siteTitle}` : siteTitle
@@ -201,7 +212,7 @@ function resetSettings() {
   Object.assign(securityForm, defaultSecurity)
   Object.assign(basicForm, defaultBasic)
   Object.assign(notificationForm, defaultNotification)
-  ElMessage.info('已恢复默认值，点击「保存设置」后生效')
+  ElMessage.info(t('settings.resetDone'))
 }
 </script>
 

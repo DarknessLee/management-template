@@ -24,9 +24,9 @@
       </el-button>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="refresh">刷新当前</el-dropdown-item>
-          <el-dropdown-item command="closeOthers">关闭其他</el-dropdown-item>
-          <el-dropdown-item command="closeAll">关闭全部</el-dropdown-item>
+          <el-dropdown-item command="refresh">{{ t('tags.refresh') }}</el-dropdown-item>
+          <el-dropdown-item command="closeOthers">{{ t('tags.closeOthers') }}</el-dropdown-item>
+          <el-dropdown-item command="closeAll">{{ t('tags.closeAll') }}</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -36,22 +36,32 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Close, ArrowDown } from '@element-plus/icons-vue'
 
 const emit = defineEmits(['refresh'])
 
 const route = useRoute()
 const router = useRouter()
+const { t, locale } = useI18n()
 
 // 仪表盘常驻，不可关闭
-const AFFIX_TAGS = [{ path: '/dashboard', title: '仪表盘', affix: true }]
-const tags = ref([...AFFIX_TAGS])
+function affixTags() {
+  return [{ path: '/dashboard', title: t('tags.dashboard'), affix: true }]
+}
+
+const tags = ref([...affixTags()])
 
 watch(
   () => route.path,
   () => addTag(),
   { immediate: true }
 )
+
+// 语言切换后同步内置标签；业务标签文案来自后端菜单，不随语言变化
+watch(locale, () => {
+  tags.value = tags.value.map(tag => (tag.affix ? { ...tag, title: t('tags.dashboard') } : tag))
+})
 
 function addTag() {
   if (!route.meta || !route.meta.title) return
@@ -71,7 +81,7 @@ function closeTag(tag) {
   tags.value.splice(index, 1)
   if (route.path === tag.path) {
     // 优先跳到右侧标签，没有就回到左侧，最后落到仪表盘
-    const next = tags.value[index] || tags.value[index - 1] || AFFIX_TAGS[0]
+    const next = tags.value[index] || tags.value[index - 1] || affixTags()[0]
     router.push(next.path)
   }
 }
@@ -86,9 +96,9 @@ function handleCommand(command) {
     return
   }
   if (command === 'closeAll') {
-    tags.value = [...AFFIX_TAGS]
-    if (route.path !== AFFIX_TAGS[0].path) {
-      router.push(AFFIX_TAGS[0].path)
+    tags.value = [...affixTags()]
+    if (route.path !== '/dashboard') {
+      router.push('/dashboard')
     }
   }
 }

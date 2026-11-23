@@ -9,14 +9,14 @@
           alt="logo"
         />
         <h1>{{ siteStore.config.siteTitle }}</h1>
-        <p>欢迎登录</p>
+        <p>{{ t('login.welcome') }}</p>
       </div>
       <el-form ref="loginFormRef" :model="loginForm" :rules="rules" label-width="0px" class="login-form">
         <el-form-item prop="username">
           <el-input 
             v-model="loginForm.username" 
             type="text" 
-            placeholder="请输入用户名"
+            :placeholder="t('login.usernamePlaceholder')"
             :prefix-icon="icons.User"
             size="large"
             @keyup.enter="handleLogin"
@@ -26,7 +26,7 @@
           <el-input 
             v-model="loginForm.password" 
             type="password" 
-            placeholder="请输入密码"
+            :placeholder="t('login.passwordPlaceholder')"
             :prefix-icon="icons.Lock"
             size="large"
             show-password
@@ -38,7 +38,7 @@
             <el-input
               v-model="loginForm.captchaCode"
               type="text"
-              placeholder="请输入验证码"
+              :placeholder="t('login.captchaPlaceholder')"
               size="large"
               maxlength="4"
               @keyup.enter="handleLogin"
@@ -47,11 +47,11 @@
               v-if="captchaImage"
               :src="captchaImage"
               class="captcha-img"
-              alt="验证码"
-              title="点击刷新"
+              :alt="t('login.captchaAlt')"
+              :title="t('login.captchaRefresh')"
               @click="loadCaptcha"
             />
-            <div v-else class="captcha-img captcha-placeholder" @click="loadCaptcha">加载中</div>
+            <div v-else class="captcha-img captcha-placeholder" @click="loadCaptcha">{{ t('common.loading') }}</div>
           </div>
         </el-form-item>
         <!-- 让回车也触发登录事件 -->
@@ -63,22 +63,23 @@
             @click="handleLogin"
             class="login-btn"
           >
-            登 录
+            {{ t('login.submit') }}
           </el-button>
         </el-form-item>
       </el-form>
       <div class="login-tips">
-        <p>测试账号：admin / 123456 或 user / 123456</p>
+        <p>{{ t('login.testAccounts') }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
 import { getCaptchaApi } from '@/api/user'
@@ -86,6 +87,7 @@ import { getCaptchaApi } from '@/api/user'
 const router = useRouter()
 const userStore = useUserStore()
 const siteStore = useSiteStore()
+const { t } = useI18n()
 
 // 局部注册图标组件，供 el-input 的 prefix-icon 使用
 const icons = { User, Lock }
@@ -101,19 +103,20 @@ const loginForm = reactive({
   captchaCode: ''
 })
 
-const rules = {
+// 用 computed 让校验提示跟随语言切换
+const rules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在3到20个字符', trigger: 'blur' }
+    { required: true, message: t('login.usernameRequired'), trigger: 'blur' },
+    { min: 3, max: 20, message: t('login.usernameLength'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在6到20个字符', trigger: 'blur' }
+    { required: true, message: t('login.passwordRequired'), trigger: 'blur' },
+    { min: 6, max: 20, message: t('login.passwordLength'), trigger: 'blur' }
   ],
   captchaCode: [
-    { required: true, message: '请输入验证码', trigger: 'blur' }
+    { required: true, message: t('login.captchaRequired'), trigger: 'blur' }
   ]
-}
+}))
 
 onMounted(() => {
   siteStore.load()
@@ -146,7 +149,7 @@ async function handleLogin() {
       loginForm.captchaCode
     )
     if (ok) {
-      ElMessage.success('登录成功')
+      ElMessage.success(t('login.success'))
       router.push('/dashboard')
     } else {
       // 验证码一次性使用，失败后必须换一张，否则重试也会报"已过期"
