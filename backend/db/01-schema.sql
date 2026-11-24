@@ -165,6 +165,21 @@ CREATE TABLE IF NOT EXISTS sys_notice_read (
     KEY idx_user_id (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='公告已读记录表';
 
+CREATE TABLE IF NOT EXISTS sys_message (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT       NOT NULL COMMENT '接收人ID',
+    type        VARCHAR(30)  NOT NULL COMMENT '消息类型：notice/job/kick/system',
+    title       VARCHAR(100) NOT NULL COMMENT '消息标题',
+    content     VARCHAR(500) DEFAULT NULL COMMENT '消息内容',
+    link        VARCHAR(200) DEFAULT NULL COMMENT '点击跳转的前端路由',
+    read_flag   TINYINT      NOT NULL DEFAULT 0 COMMENT '是否已读：1已读 0未读',
+    read_time   DATETIME     DEFAULT NULL COMMENT '已读时间',
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_user_read (user_id, read_flag),
+    KEY idx_create_time (create_time)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='站内消息表';
+
 CREATE TABLE IF NOT EXISTS sys_dict_type (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     name        VARCHAR(50)  NOT NULL COMMENT '字典名称',

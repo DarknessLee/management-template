@@ -37,7 +37,7 @@ public class AuthController {
     @RequirePermission("users:edit")
     @OperationLog(module = "用户管理", action = "强制下线")
     public Result<Integer> kickout(@PathVariable Long userId) {
-        return Result.ok(authService.invalidateAllSessions(userId));
+        return Result.ok(authService.kickout(userId));
     }
 
     @Operation(summary = "获取图形验证码")

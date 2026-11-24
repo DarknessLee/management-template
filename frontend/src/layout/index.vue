@@ -77,38 +77,59 @@
             </template>
           </el-dropdown>
           <el-popover
-            v-model:visible="noticePopoverVisible"
+            v-model:visible="messagePopoverVisible"
             placement="bottom-end"
-            :width="360"
+            :width="380"
             trigger="click"
           >
             <template #reference>
               <el-badge
-                :value="unreadNotices.length"
+                :value="messageStore.unreadCount"
                 :max="99"
-                :hidden="unreadNotices.length === 0"
+                :hidden="messageStore.unreadCount === 0"
                 class="notice-badge"
               >
-                <el-button class="notice-btn" circle>
+                <el-button class="notice-btn" circle :title="t('header.messageCenter')">
                   <el-icon><component :is="icons.Bell" /></el-icon>
                 </el-button>
               </el-badge>
             </template>
             <div class="notice-panel">
               <div class="notice-panel-header">
-                <span>{{ t('header.unreadNotices') }}</span>
-                <span class="notice-count">{{ t('header.noticeCount', { count: unreadNotices.length }) }}</span>
+                <span>{{ t('header.messageCenter') }}</span>
+                <el-button
+                  link
+                  type="primary"
+                  size="small"
+                  :disabled="messageStore.unreadCount === 0"
+                  @click="handleMarkAllRead"
+                >
+                  {{ t('header.allRead') }}
+                </el-button>
               </div>
-              <div v-if="unreadNotices.length === 0" class="notice-empty">{{ t('header.noUnreadNotices') }}</div>
+              <div v-if="messageStore.loading && messageStore.messages.length === 0" class="notice-empty">
+                {{ t('common.loading') }}
+              </div>
+              <div v-else-if="messageStore.messages.length === 0" class="notice-empty">
+                {{ t('header.noMessages') }}
+              </div>
               <div v-else class="notice-list">
                 <div
-                  v-for="notice in unreadNotices"
-                  :key="notice.id"
+                  v-for="message in messageStore.messages"
+                  :key="message.id"
                   class="notice-item"
-                  @click="openNotice(notice)"
+                  :class="{ unread: message.readFlag === 0 }"
+                  @click="openMessage(message)"
                 >
-                  <p class="notice-title">{{ notice.title }}</p>
-                  <p class="notice-time">{{ notice.publishTime || notice.createTime }}</p>
+                  <div class="message-head">
+                    <el-tag :type="messageTagType(message.type)" size="small">{{ typeLabel(message.type) }}</el-tag>
+                    <p class="notice-title">{{ message.title }}</p>
+                    <el-button class="message-delete" link @click.stop="handleRemoveMessage(message)">
+                      <el-icon><component :is="icons.Close" /></el-icon>
+                    </el-button>
+                  </div>
+                  <p v-if="message.content" class="message-content">{{ message.content }}</p>
+                  <p class="notice-time">{{ message.createTime }}</p>
                 </div>
               </div>
             </div>
@@ -138,11 +159,17 @@
       </div>
     </main>
 
-    <el-dialog v-model="noticeDialogVisible" :title="currentNotice.title" width="600px">
+    <el-dialog v-model="messageDialogVisible" :title="currentMessage.title" width="600px">
       <div class="notice-detail">
-        <p class="notice-detail-time">{{ t('header.publishedAt', { time: currentNotice.publishTime || '—' }) }}</p>
-        <p class="notice-detail-content">{{ currentNotice.content }}</p>
+        <p class="notice-detail-time">{{ currentMessage.createTime || '—' }}</p>
+        <p class="notice-detail-content">{{ currentMessage.content || t('header.noContent') }}</p>
       </div>
+      <template #footer>
+        <el-button @click="messageDialogVisible = false">{{ t('common.close') }}</el-button>
+        <el-button v-if="currentMessage.link" type="primary" @click="goToMessageLink">
+          {{ t('header.goTo') }}
+        </el-button>
+      </template>
     </el-dialog>
 
     <Watermark v-if="siteStore.config.watermark" :text="watermarkText" />
@@ -150,15 +177,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useMenuStore } from '@/stores/menu'
+import { useMessageStore } from '@/stores/message'
 import { assetUrl } from '@/utils/asset'
 import { localizedTitle } from '@/utils/title'
-import { getUnreadNoticesApi, markNoticeReadApi } from '@/api/notice'
 import TagsView from './components/TagsView.vue'
 import Watermark from './components/Watermark.vue'
 import { useSiteStore } from '@/stores/site'
@@ -187,7 +214,8 @@ import {
   Expand, 
   ArrowDown,
   Moon,
-  Sunny
+  Sunny,
+  Close
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -195,6 +223,7 @@ const route = useRoute()
 const userStore = useUserStore()
 const menuStore = useMenuStore()
 const siteStore = useSiteStore()
+const messageStore = useMessageStore()
 const { t } = useI18n()
 
 // 折叠时用品牌名首字作为图标
@@ -218,10 +247,9 @@ function refreshView() {
   viewKey.value += 1
 }
 
-const unreadNotices = ref([])
-const noticePopoverVisible = ref(false)
-const noticeDialogVisible = ref(false)
-const currentNotice = ref({})
+const messagePopoverVisible = ref(false)
+const messageDialogVisible = ref(false)
+const currentMessage = ref({})
 
 const icons = {
   Odometer,
@@ -248,7 +276,8 @@ const icons = {
   Expand,
   ArrowDown,
   Moon,
-  Sunny
+  Sunny,
+  Close
 }
 
 const activeMenu = computed(() => route.path)
@@ -268,31 +297,14 @@ onMounted(() => {
     userStore.getUserInfo()
   }
   if (userStore.token) {
-    loadUnreadNotices()
+    messageStore.setKickoutHandler(handleKickout)
+    messageStore.start()
   }
 })
 
-async function loadUnreadNotices() {
-  try {
-    const res = await getUnreadNoticesApi()
-    unreadNotices.value = res.data
-  } catch (error) {
-    // 拦截器已提示
-  }
-}
-
-// 点击即视为已读：先展示内容，再调用接口并从列表移除
-async function openNotice(notice) {
-  currentNotice.value = notice
-  noticeDialogVisible.value = true
-  noticePopoverVisible.value = false
-  try {
-    await markNoticeReadApi(notice.id)
-    unreadNotices.value = unreadNotices.value.filter(item => item.id !== notice.id)
-  } catch (error) {
-    // 标记失败不影响查看内容
-  }
-}
+onBeforeUnmount(() => {
+  messageStore.stop()
+})
 
 async function handleCommand(command) {
   if (command === 'profile') {
@@ -300,11 +312,67 @@ async function handleCommand(command) {
     return
   }
   if (command === 'logout') {
+    messageStore.stop()
     await userStore.logout()
     resetDynamicRoutes()
     ElMessage.success(t('header.logoutSuccess'))
     router.push('/login')
   }
+}
+
+// 点击消息即视为已读，并弹出内容详情
+async function openMessage(message) {
+  currentMessage.value = message
+  messageDialogVisible.value = true
+  messagePopoverVisible.value = false
+  await messageStore.markRead(message)
+}
+
+async function handleMarkAllRead() {
+  await messageStore.markAllRead()
+  ElMessage.success(t('header.allReadSuccess'))
+}
+
+async function handleRemoveMessage(message) {
+  await messageStore.remove(message)
+}
+
+function goToMessageLink() {
+  const link = currentMessage.value.link
+  messageDialogVisible.value = false
+  if (link) {
+    router.push(link)
+  }
+}
+
+const MESSAGE_TYPE_LABELS = {
+  notice: 'header.messageType.notice',
+  job: 'header.messageType.job',
+  kick: 'header.messageType.kick',
+  system: 'header.messageType.system'
+}
+
+const MESSAGE_TAG_TYPES = {
+  notice: 'primary',
+  job: 'warning',
+  kick: 'danger',
+  system: 'info'
+}
+
+function typeLabel(type) {
+  return t(MESSAGE_TYPE_LABELS[type] || 'header.messageType.system')
+}
+
+function messageTagType(type) {
+  return MESSAGE_TAG_TYPES[type] || 'info'
+}
+
+// 被强制下线：消息通道已由 store 关闭，这里清理本地登录态并提示
+function handleKickout() {
+  resetDynamicRoutes()
+  userStore.clearAuth()
+  ElMessageBox.alert(t('header.kicked'), t('common.confirmTitle'), { type: 'warning' })
+    .finally(() => router.push('/login'))
 }
 
 // 顶栏语言切换：与设置页共用 siteStore，即时生效并写入本地偏好
@@ -508,6 +576,47 @@ function collectLeafPaths(menus, paths = []) {
   font-size: 14px;
   color: var(--app-text-primary);
   margin-bottom: 4px;
+}
+
+.message-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-head .notice-title {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.notice-item.unread .notice-title {
+  font-weight: 600;
+}
+
+.message-content {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.message-delete {
+  visibility: hidden;
+  padding: 0;
+  height: auto;
+  color: var(--app-text-secondary);
+}
+
+.notice-item:hover .message-delete {
+  visibility: visible;
 }
 
 .notice-time {

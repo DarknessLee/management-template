@@ -10,6 +10,8 @@ import com.mgmt.module.auth.dto.LoginResponse;
 import com.mgmt.module.auth.dto.UserInfoVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
+import com.mgmt.module.message.MessageService;
+import com.mgmt.module.message.MessageSocketRegistry;
 import com.mgmt.module.role.PermissionService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
@@ -50,6 +52,8 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final CaptchaService captchaService;
     private final SettingService settingService;
+    private final MessageService messageService;
+    private final MessageSocketRegistry messageSocketRegistry;
 
     @Value("${app.login.max-fail:5}")
     private int maxFail;
@@ -185,6 +189,20 @@ public class AuthService {
         vo.setPermissions(permissionService.permissionsOf(user.getId()));
         vo.setAvatar(user.getAvatar() == null ? "" : user.getAvatar());
         return vo;
+    }
+
+    /**
+     * 强制下线：清理全部会话后留下一条站内消息，并关闭该用户已建立的消息连接。
+     * 与修改密码共用 {@link #invalidateAllSessions(Long)}，但不发消息。
+     */
+    public int kickout(Long userId) {
+        int count = invalidateAllSessions(userId);
+        messageService.send(userId, MessageService.TYPE_KICK,
+                I18n.get("message.kickTitle"),
+                I18n.get("message.kickContent"),
+                null);
+        messageSocketRegistry.close(userId);
+        return count;
     }
 
     /**

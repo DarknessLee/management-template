@@ -47,10 +47,19 @@ export default {
     profile: '个人中心',
     logout: '退出登录',
     logoutSuccess: '已退出登录',
-    unreadNotices: '未读公告',
-    noticeCount: '{count} 条',
-    noUnreadNotices: '暂无未读公告',
-    publishedAt: '发布时间：{time}'
+    messageCenter: '消息中心',
+    allRead: '全部已读',
+    allReadSuccess: '已全部标记为已读',
+    noMessages: '暂无消息',
+    noContent: '暂无内容',
+    goTo: '前往查看',
+    kicked: '您的账号已被管理员强制下线，请重新登录',
+    messageType: {
+      notice: '公告',
+      job: '任务',
+      kick: '下线',
+      system: '系统'
+    }
   },
   tags: {
     refresh: '刷新当前',

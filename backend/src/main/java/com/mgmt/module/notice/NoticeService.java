@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.message.MessageService;
 import com.mgmt.module.notice.dto.NoticeReadStatsVO;
 import com.mgmt.module.notice.dto.NoticeReadVO;
 import com.mgmt.module.notice.dto.NoticeRequest;
@@ -42,6 +43,7 @@ public class NoticeService {
     private final SysNoticeMapper noticeMapper;
     private final SysNoticeReadMapper readMapper;
     private final SysUserMapper userMapper;
+    private final MessageService messageService;
 
     public PageResult<SysNotice> page(long page, long size, String keyword, Integer status) {
         LambdaQueryWrapper<SysNotice> wrapper = new LambdaQueryWrapper<>();
@@ -104,6 +106,13 @@ public class NoticeService {
             notice.setPublishTime(LocalDateTime.now());
         }
         noticeMapper.updateById(notice);
+        // 发布后给所有启用用户发一条站内消息，在线用户由 WebSocket 实时收到
+        if (status == STATUS_PUBLISHED) {
+            messageService.sendToAllEnabled(MessageService.TYPE_NOTICE,
+                    I18n.get("message.noticeTitle", notice.getTitle()),
+                    notice.getContent(),
+                    null);
+        }
         return notice;
     }
 

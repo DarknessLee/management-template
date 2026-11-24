@@ -47,10 +47,19 @@ export default {
     profile: 'Profile',
     logout: 'Sign out',
     logoutSuccess: 'Signed out',
-    unreadNotices: 'Unread notices',
-    noticeCount: '{count} items',
-    noUnreadNotices: 'No unread notices',
-    publishedAt: 'Published at: {time}'
+    messageCenter: 'Message center',
+    allRead: 'Mark all read',
+    allReadSuccess: 'All messages marked as read',
+    noMessages: 'No messages',
+    noContent: 'No content',
+    goTo: 'Go to',
+    kicked: 'Your account has been forced offline by an administrator, please sign in again',
+    messageType: {
+      notice: 'Notice',
+      job: 'Job',
+      kick: 'Offline',
+      system: 'System'
+    }
   },
   tags: {
     refresh: 'Refresh current',

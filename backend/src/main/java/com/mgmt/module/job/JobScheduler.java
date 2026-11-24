@@ -3,6 +3,7 @@ package com.mgmt.module.job;
 import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.module.job.entity.SysJob;
+import com.mgmt.module.message.MessageService;
 import com.mgmt.module.job.mapper.SysJobMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -32,6 +33,7 @@ public class JobScheduler {
     private final SysJobMapper jobMapper;
     private final List<JobHandler> jobHandlers;
     private final JobLogService jobLogService;
+    private final MessageService messageService;
 
     private final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
     private final Map<Long, ScheduledFuture<?>> futures = new ConcurrentHashMap<>();
@@ -142,6 +144,12 @@ public class JobScheduler {
             jobLogService.record(job, JobLogService.TRIGGER_SCHEDULED, false,
                     System.currentTimeMillis() - start, result);
             log.error("任务 {} 执行失败", job.getName(), e);
+            // 定时执行无人值守，失败时通知拥有任务查看权限的用户
+            messageService.sendToPermission("job:view", MessageService.TYPE_JOB,
+                    I18n.get("message.jobFailTitle"),
+                    I18n.get("message.jobFailContent", job.getName(),
+                            e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()),
+                    "/jobs");
         }
     }
 
