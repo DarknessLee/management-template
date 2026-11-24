@@ -51,6 +51,7 @@ export default {
     allRead: 'Mark all read',
     allReadSuccess: 'All messages marked as read',
     noMessages: 'No messages',
+    viewAll: 'View all',
     noContent: 'No content',
     goTo: 'Go to',
     kicked: 'Your account has been forced offline by an administrator, please sign in again',
@@ -565,6 +566,27 @@ export default {
       readTime: 'Read At'
     },
     deleteConfirm: 'Delete notice "{name}"?'
+  },
+  messages: {
+    title: 'Message Center',
+    allTypes: 'All types',
+    allStatus: 'All statuses',
+    read: 'Read',
+    unread: 'Unread',
+    view: 'View',
+    delete: 'Delete',
+    markAllRead: 'Mark all read',
+    batchDelete: 'Batch delete',
+    columns: {
+      type: 'Type',
+      title: 'Title',
+      content: 'Content',
+      status: 'Status',
+      createTime: 'Time',
+      operation: 'Actions'
+    },
+    deleteConfirm: 'Delete message "{name}"?',
+    batchDeleteConfirm: 'Delete the {count} selected messages?'
   },
   logs: {
     title: 'Operation Logs',

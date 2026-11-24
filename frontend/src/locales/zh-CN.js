@@ -51,6 +51,7 @@ export default {
     allRead: '全部已读',
     allReadSuccess: '已全部标记为已读',
     noMessages: '暂无消息',
+    viewAll: '查看全部',
     noContent: '暂无内容',
     goTo: '前往查看',
     kicked: '您的账号已被管理员强制下线，请重新登录',
@@ -565,6 +566,27 @@ export default {
       readTime: '已读时间'
     },
     deleteConfirm: '确定要删除公告「{name}」吗？'
+  },
+  messages: {
+    title: '消息中心',
+    allTypes: '全部类型',
+    allStatus: '全部状态',
+    read: '已读',
+    unread: '未读',
+    view: '查看',
+    delete: '删除',
+    markAllRead: '全部已读',
+    batchDelete: '批量删除',
+    columns: {
+      type: '类型',
+      title: '标题',
+      content: '内容',
+      status: '状态',
+      createTime: '时间',
+      operation: '操作'
+    },
+    deleteConfirm: '确定要删除消息「{name}」吗？',
+    batchDeleteConfirm: '确定要删除选中的 {count} 条消息吗？'
   },
   logs: {
     title: '操作日志',

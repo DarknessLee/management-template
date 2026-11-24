@@ -35,3 +35,11 @@ export function deleteMessageApi(id) {
     method: 'delete'
   })
 }
+
+export function batchDeleteMessagesApi(ids) {
+  return request({
+    url: '/messages/batch',
+    method: 'delete',
+    data: ids
+  })
+}

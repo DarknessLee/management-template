@@ -46,11 +46,12 @@ public class MessageService {
     private final SysRolePermissionMapper rolePermissionMapper;
     private final MessageSocketRegistry socketRegistry;
 
-    public PageResult<SysMessage> page(Long userId, long page, long size, Integer readFlag) {
+    public PageResult<SysMessage> page(Long userId, long page, long size, Integer readFlag, String type) {
         IPage<SysMessage> result = messageMapper.selectPage(new Page<>(page, size),
                 new LambdaQueryWrapper<SysMessage>()
                         .eq(SysMessage::getUserId, userId)
                         .eq(readFlag != null, SysMessage::getReadFlag, readFlag)
+                        .eq(type != null && !type.isBlank(), SysMessage::getType, type)
                         .orderByDesc(SysMessage::getCreateTime)
                         .orderByDesc(SysMessage::getId));
         return PageResult.of(result, result.getRecords());
@@ -92,6 +93,16 @@ public class MessageService {
             throw new BizException(404, I18n.get("message.notFound"));
         }
         messageMapper.deleteById(id);
+    }
+
+    /** 批量删除只作用于当前用户自己的消息，混入别人的 ID 不会误删 */
+    public void deleteBatch(Collection<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        messageMapper.delete(new LambdaQueryWrapper<SysMessage>()
+                .eq(SysMessage::getUserId, userId)
+                .in(SysMessage::getId, ids));
     }
 
     /** 单个用户发消息 */

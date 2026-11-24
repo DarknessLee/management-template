@@ -132,6 +132,11 @@
                   <p class="notice-time">{{ message.createTime }}</p>
                 </div>
               </div>
+              <div class="notice-panel-footer">
+                <el-button link type="primary" @click="goToMessageCenter">
+                  {{ t('header.viewAll') }}
+                </el-button>
+              </div>
             </div>
           </el-popover>
           <el-dropdown @command="handleCommand">
@@ -335,6 +340,12 @@ async function handleMarkAllRead() {
 
 async function handleRemoveMessage(message) {
   await messageStore.remove(message)
+}
+
+// 铃铛面板的“查看全部”跳到消息中心列表页
+function goToMessageCenter() {
+  messagePopoverVisible.value = false
+  router.push('/messages')
 }
 
 function goToMessageLink() {
@@ -560,6 +571,12 @@ function collectLeafPaths(menus, paths = []) {
 .notice-list {
   max-height: 320px;
   overflow-y: auto;
+}
+
+.notice-panel-footer {
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+  text-align: center;
 }
 
 .notice-item {

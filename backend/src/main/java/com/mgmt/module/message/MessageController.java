@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/messages")
@@ -27,8 +30,9 @@ public class MessageController {
     @GetMapping
     public Result<PageResult<SysMessage>> page(@RequestParam(defaultValue = "1") long page,
                                                @RequestParam(defaultValue = "10") long size,
-                                               @RequestParam(required = false) Integer readFlag) {
-        return Result.ok(messageService.page(UserContext.getUserId(), page, size, readFlag));
+                                               @RequestParam(required = false) Integer readFlag,
+                                               @RequestParam(required = false) String type) {
+        return Result.ok(messageService.page(UserContext.getUserId(), page, size, readFlag, type));
     }
 
     @Operation(summary = "当前用户未读消息数")
@@ -48,6 +52,13 @@ public class MessageController {
     @PutMapping("/read-all")
     public Result<Void> markAllRead() {
         messageService.markAllRead(UserContext.getUserId());
+        return Result.ok();
+    }
+
+    @Operation(summary = "批量删除消息")
+    @DeleteMapping("/batch")
+    public Result<Void> deleteBatch(@RequestBody List<Long> ids) {
+        messageService.deleteBatch(ids, UserContext.getUserId());
         return Result.ok();
     }
 

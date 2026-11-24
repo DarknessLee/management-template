@@ -71,6 +71,7 @@ public class DataSeeder implements ApplicationRunner {
         seedMenus();
         migrateMenuGroups();
         ensureFileMenu();
+        ensureMessageMenu();
         ensureMenuEnglishTitles();
         seedDepts();
         seedJobs();
@@ -223,6 +224,20 @@ public class DataSeeder implements ApplicationRunner {
         log.info("补充文件管理菜单");
     }
 
+    /**
+     * 消息中心是后加的功能，老库按路径幂等补一条顶级菜单。
+     * permission 留空，登录用户都能看到自己的消息，无需按钮权限。
+     */
+    private void ensureMessageMenu() {
+        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, "/messages"));
+        if (exists > 0) {
+            return;
+        }
+        createMenu(0L, "/messages", "消息中心", "views/messages/index.vue", "Bell", null, 6);
+        log.info("补充消息中心菜单");
+    }
+
     private void ensureMenuStructure() {
         Integer columnCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.columns "
@@ -280,6 +295,7 @@ public class DataSeeder implements ApplicationRunner {
         titles.put("/online-users", "Online Users");
         titles.put("/content", "Content");
         titles.put("/notices", "Notices");
+        titles.put("/messages", "Messages");
         titles.forEach((path, titleEn) -> jdbcTemplate.update(
                 "UPDATE sys_menu SET title_en = ? WHERE path = ? AND (title_en IS NULL OR title_en = '')",
                 titleEn, path));
