@@ -2,6 +2,7 @@ package com.mgmt.module.notice;
 
 import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
@@ -55,6 +56,10 @@ public class NoticeService {
                 .orderByDesc(SysNotice::getId);
 
         IPage<SysNotice> result = noticeMapper.selectPage(new Page<>(page, size), wrapper);
+        // 已设置定时且仍处于下线状态，列表里标记为「待发布」（到点由任务上线）
+        result.getRecords().forEach(notice -> notice.setScheduled(
+                Integer.valueOf(STATUS_OFFLINE).equals(notice.getStatus())
+                        && notice.getScheduledTime() != null));
         attachReadCount(result.getRecords());
         return PageResult.of(result, result.getRecords());
     }
@@ -96,6 +101,7 @@ public class NoticeService {
         notice.setTitle(request.getTitle().trim());
         notice.setContent(sanitizeContent(request.getContent()));
         notice.setPinned(normalizePinned(request.getPinned()));
+        notice.setExpireTime(validateExpire(request.getExpireTime()));
         // 新建先保持下线状态，由管理员确认后再发布
         notice.setStatus(STATUS_OFFLINE);
         noticeMapper.insert(notice);
@@ -103,13 +109,17 @@ public class NoticeService {
     }
 
     public SysNotice update(Long id, NoticeRequest request) {
-        SysNotice notice = requireNotice(id);
+        requireNotice(id);
         validate(request);
-        notice.setTitle(request.getTitle().trim());
-        notice.setContent(sanitizeContent(request.getContent()));
-        notice.setPinned(normalizePinned(request.getPinned()));
-        noticeMapper.updateById(notice);
-        return notice;
+        // 用 UpdateWrapper 才能把到期时间真正清空（updateById 会忽略 null 字段）
+        noticeMapper.update(null, new LambdaUpdateWrapper<SysNotice>()
+                .eq(SysNotice::getId, id)
+                .set(SysNotice::getTitle, request.getTitle().trim())
+                .set(SysNotice::getContent, sanitizeContent(request.getContent()))
+                .set(SysNotice::getPinned, normalizePinned(request.getPinned()))
+                .set(SysNotice::getExpireTime, validateExpire(request.getExpireTime()))
+                .set(SysNotice::getUpdateTime, LocalDateTime.now()));
+        return requireNotice(id);
     }
 
     /**
@@ -126,26 +136,112 @@ public class NoticeService {
     }
 
     /**
-     * 发布或下线。重复发布时刷新发布时间，让公告回到未读列表顶部。
+     * 发布或下线。发布立即生效并清掉定时；下线同时取消未到点的定时发布。
      */
     public SysNotice updateStatus(Long id, Integer status) {
         if (status == null || (status != STATUS_OFFLINE && status != STATUS_PUBLISHED)) {
             throw new BizException(I18n.get("notice.statusInvalid"));
         }
         SysNotice notice = requireNotice(id);
-        notice.setStatus(status);
+        LocalDateTime now = LocalDateTime.now();
+        LambdaUpdateWrapper<SysNotice> wrapper = new LambdaUpdateWrapper<SysNotice>()
+                .eq(SysNotice::getId, id)
+                .set(SysNotice::getStatus, status)
+                .set(SysNotice::getScheduledTime, null)
+                .set(SysNotice::getUpdateTime, now);
         if (status == STATUS_PUBLISHED) {
-            notice.setPublishTime(LocalDateTime.now());
+            wrapper.set(SysNotice::getPublishTime, now);
         }
-        noticeMapper.updateById(notice);
-        // 发布后给所有启用用户发一条站内消息，在线用户由 WebSocket 实时收到
+        noticeMapper.update(null, wrapper);
         if (status == STATUS_PUBLISHED) {
-            messageService.sendToAllEnabled(MessageService.TYPE_NOTICE,
-                    I18n.get("message.noticeTitle", notice.getTitle()),
-                    HtmlSanitizer.plainText(notice.getContent()),
-                    null);
+            notifyPublished(notice);
         }
-        return notice;
+        return requireNotice(id);
+    }
+
+    /**
+     * 发布公告：发布时间晚于当前时间则进入待发布，由定时任务到点自动上线。
+     */
+    @Transactional
+    public SysNotice publish(Long id, LocalDateTime scheduledTime, LocalDateTime expireTime) {
+        SysNotice notice = requireNotice(id);
+        if (scheduledTime == null) {
+            throw new BizException(I18n.get("notice.scheduleTimeRequired"));
+        }
+        LocalDateTime now = LocalDateTime.now();
+        boolean future = scheduledTime.isAfter(now);
+        LocalDateTime effectiveStart = future ? scheduledTime : now;
+        if (expireTime != null && !expireTime.isAfter(effectiveStart)) {
+            throw new BizException(I18n.get("notice.expireInvalid"));
+        }
+
+        LambdaUpdateWrapper<SysNotice> wrapper = new LambdaUpdateWrapper<SysNotice>()
+                .eq(SysNotice::getId, id)
+                .set(SysNotice::getExpireTime, expireTime)
+                .set(SysNotice::getUpdateTime, now);
+        if (future) {
+            wrapper.set(SysNotice::getStatus, STATUS_OFFLINE)
+                    .set(SysNotice::getScheduledTime, scheduledTime)
+                    .set(SysNotice::getPublishTime, null);
+        } else {
+            wrapper.set(SysNotice::getStatus, STATUS_PUBLISHED)
+                    .set(SysNotice::getScheduledTime, null)
+                    .set(SysNotice::getPublishTime, now);
+        }
+        noticeMapper.update(null, wrapper);
+        if (!future) {
+            notifyPublished(notice);
+        }
+        return requireNotice(id);
+    }
+
+    /**
+     * 定时任务入口：到点发布已定时的公告，并下线已到期的公告。
+     * 返回本次自动发布的公告数量。
+     */
+    @Transactional
+    public int applySchedule() {
+        LocalDateTime now = LocalDateTime.now();
+        int published = 0;
+
+        List<SysNotice> due = noticeMapper.selectList(new LambdaQueryWrapper<SysNotice>()
+                .eq(SysNotice::getStatus, STATUS_OFFLINE)
+                .isNotNull(SysNotice::getScheduledTime)
+                .le(SysNotice::getScheduledTime, now));
+        for (SysNotice notice : due) {
+            if (notice.getExpireTime() != null && !notice.getExpireTime().isAfter(now)) {
+                // 还没发布就已经过期，直接取消定时
+                noticeMapper.update(null, new LambdaUpdateWrapper<SysNotice>()
+                        .eq(SysNotice::getId, notice.getId())
+                        .set(SysNotice::getScheduledTime, null)
+                        .set(SysNotice::getUpdateTime, now));
+                continue;
+            }
+            noticeMapper.update(null, new LambdaUpdateWrapper<SysNotice>()
+                    .eq(SysNotice::getId, notice.getId())
+                    .set(SysNotice::getStatus, STATUS_PUBLISHED)
+                    .set(SysNotice::getPublishTime, notice.getScheduledTime())
+                    .set(SysNotice::getScheduledTime, null)
+                    .set(SysNotice::getUpdateTime, now));
+            notifyPublished(notice);
+            published++;
+        }
+
+        // 已发布且到达到期时间：自动下线
+        noticeMapper.update(null, new LambdaUpdateWrapper<SysNotice>()
+                .eq(SysNotice::getStatus, STATUS_PUBLISHED)
+                .isNotNull(SysNotice::getExpireTime)
+                .le(SysNotice::getExpireTime, now)
+                .set(SysNotice::getStatus, STATUS_OFFLINE)
+                .set(SysNotice::getUpdateTime, now));
+        return published;
+    }
+
+    private void notifyPublished(SysNotice notice) {
+        messageService.sendToAllEnabled(MessageService.TYPE_NOTICE,
+                I18n.get("message.noticeTitle", notice.getTitle()),
+                HtmlSanitizer.plainText(notice.getContent()),
+                null);
     }
 
     @Transactional
@@ -277,6 +373,13 @@ public class NoticeService {
 
     private Integer normalizePinned(Integer pinned) {
         return pinned != null && pinned == PINNED ? PINNED : UNPINNED;
+    }
+
+    private LocalDateTime validateExpire(LocalDateTime expireTime) {
+        if (expireTime != null && !expireTime.isAfter(LocalDateTime.now())) {
+            throw new BizException(I18n.get("notice.expireInvalid"));
+        }
+        return expireTime;
     }
 
     /**

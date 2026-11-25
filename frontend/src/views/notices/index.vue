@@ -44,8 +44,8 @@
         </el-table-column>
         <el-table-column :label="t('notices.columns.status')" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'info'" size="small">
-              {{ statusText(scope.row.status) }}
+            <el-tag :type="rowStatusType(scope.row)" size="small">
+              {{ rowStatusText(scope.row) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -56,6 +56,12 @@
           <template #default="scope">
             {{ scope.row.publishTime || '—' }}
           </template>
+        </el-table-column>
+        <el-table-column :label="t('notices.columns.scheduledTime')" width="180">
+          <template #default="scope">{{ scope.row.scheduledTime || '—' }}</template>
+        </el-table-column>
+        <el-table-column :label="t('notices.columns.expireTime')" width="180">
+          <template #default="scope">{{ scope.row.expireTime || '—' }}</template>
         </el-table-column>
         <el-table-column prop="createTime" :label="t('notices.columns.createTime')" width="180" />
         <el-table-column :label="t('notices.columns.operation')" width="400" fixed="right">
@@ -69,10 +75,10 @@
             <el-button
               v-if="canEdit"
               size="small"
-              :type="scope.row.status === 1 ? 'warning' : 'success'"
-              @click="toggleStatus(scope.row)"
+              :type="scope.row.status === 1 ? 'warning' : (scope.row.scheduled ? 'info' : 'success')"
+              @click="handlePublishAction(scope.row)"
             >
-              {{ scope.row.status === 1 ? t('notices.offline') : t('notices.publish') }}
+              {{ scope.row.status === 1 ? t('notices.offline') : (scope.row.scheduled ? t('notices.cancelSchedule') : t('notices.publish')) }}
             </el-button>
             <el-button v-if="canEdit" size="small" type="danger" @click="deleteNotice(scope.row)">{{ t('notices.delete') }}</el-button>
           </template>
@@ -107,10 +113,47 @@
         <el-form-item :label="t('notices.form.pinned')">
           <el-switch v-model="noticeForm.pinned" :active-value="1" :inactive-value="0" />
         </el-form-item>
+        <el-form-item :label="t('notices.form.expireTime')">
+          <el-date-picker
+            v-model="noticeForm.expireTime"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            :placeholder="t('notices.form.expireTime')"
+            style="width: 100%;"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="saveNotice">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="publishVisible" :title="t('notices.publishDialogTitle')" width="480px">
+      <el-form label-width="110px">
+        <el-form-item :label="t('notices.publishTimeLabel')" required>
+          <el-date-picker
+            v-model="publishForm.scheduledTime"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            :placeholder="t('notices.publishTimeLabel')"
+            style="width: 100%;"
+          />
+        </el-form-item>
+        <el-form-item :label="t('notices.expireTimeLabel')">
+          <el-date-picker
+            v-model="publishForm.expireTime"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            :placeholder="t('notices.expireTimeLabel')"
+            style="width: 100%;"
+          />
+        </el-form-item>
+      </el-form>
+      <p class="publish-tip">{{ t('notices.publishTip') }}</p>
+      <template #footer>
+        <el-button @click="publishVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="publishing" @click="submitPublish">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
 
@@ -154,6 +197,7 @@ import {
   createNoticeApi,
   updateNoticeApi,
   updateNoticeStatusApi,
+  scheduleNoticeApi,
   updateNoticePinnedApi,
   getNoticeReadStatsApi,
   getNoticeReadsApi,
@@ -190,6 +234,21 @@ const statusOptions = computed(() => noticeStatusOptions.value.map(item => ({
   label: statusText(item.value)
 })))
 
+// 列表行状态：已定时未到点显示「待发布」
+function rowStatusText(row) {
+  if (row.scheduled) {
+    return t('notices.statusPending')
+  }
+  return statusText(row.status)
+}
+
+function rowStatusType(row) {
+  if (row.scheduled) {
+    return 'warning'
+  }
+  return row.status === 1 ? 'success' : 'info'
+}
+
 const noticeList = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => isEdit.value ? t('notices.editTitle') : t('notices.addTitle'))
@@ -211,7 +270,16 @@ const noticeForm = reactive({
   id: null,
   title: '',
   content: '',
-  pinned: 0
+  pinned: 0,
+  expireTime: null
+})
+
+const publishVisible = ref(false)
+const publishing = ref(false)
+const publishTarget = ref(null)
+const publishForm = reactive({
+  scheduledTime: '',
+  expireTime: ''
 })
 
 const formRules = computed(() => ({
@@ -279,6 +347,7 @@ function openAddDialog() {
   noticeForm.title = ''
   noticeForm.content = ''
   noticeForm.pinned = 0
+  noticeForm.expireTime = null
   dialogVisible.value = true
 }
 
@@ -288,7 +357,8 @@ function openEditDialog(row) {
     id: row.id,
     title: row.title,
     content: row.content,
-    pinned: row.pinned || 0
+    pinned: row.pinned || 0,
+    expireTime: row.expireTime || null
   })
   dialogVisible.value = true
 }
@@ -300,7 +370,8 @@ async function saveNotice() {
   const payload = {
     title: noticeForm.title,
     content: noticeForm.content,
-    pinned: noticeForm.pinned
+    pinned: noticeForm.pinned,
+    expireTime: noticeForm.expireTime || null
   }
 
   try {
@@ -317,24 +388,88 @@ async function saveNotice() {
   }
 }
 
-async function toggleStatus(row) {
-  const targetStatus = row.status === 1 ? 0 : 1
+function nowString() {
+  const d = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function handlePublishAction(row) {
+  if (row.status === 1) {
+    offlineNotice(row)
+    return
+  }
+  if (row.scheduled) {
+    cancelSchedule(row)
+    return
+  }
+  openPublishDialog(row)
+}
+
+async function offlineNotice(row) {
   try {
     await ElMessageBox.confirm(
-      t(targetStatus === 1 ? 'notices.publishConfirm' : 'notices.offlineConfirm', { name: row.title }),
+      t('notices.offlineConfirm', { name: row.title }),
       t('common.confirmTitle'),
       { type: 'warning' }
     )
   } catch (error) {
     return
   }
-
   try {
-    await updateNoticeStatusApi(row.id, targetStatus)
-    ElMessage.success(t(targetStatus === 1 ? 'notices.publishSuccess' : 'notices.offlineSuccess'))
+    await updateNoticeStatusApi(row.id, 0)
+    ElMessage.success(t('notices.offlineSuccess'))
     loadNotices()
   } catch (error) {
     // 拦截器已提示
+  }
+}
+
+async function cancelSchedule(row) {
+  try {
+    await ElMessageBox.confirm(
+      t('notices.cancelScheduleConfirm', { name: row.title }),
+      t('common.confirmTitle'),
+      { type: 'warning' }
+    )
+  } catch (error) {
+    return
+  }
+  try {
+    await updateNoticeStatusApi(row.id, 0)
+    ElMessage.success(t('notices.cancelScheduleSuccess'))
+    loadNotices()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function openPublishDialog(row) {
+  publishTarget.value = row
+  publishForm.scheduledTime = nowString()
+  publishForm.expireTime = row.expireTime || ''
+  publishVisible.value = true
+}
+
+async function submitPublish() {
+  if (!publishForm.scheduledTime) {
+    ElMessage.warning(t('notices.scheduleTimeRequired'))
+    return
+  }
+  const future = publishForm.scheduledTime > nowString()
+  publishing.value = true
+  try {
+    await scheduleNoticeApi(publishTarget.value.id, {
+      scheduledTime: publishForm.scheduledTime,
+      expireTime: publishForm.expireTime || null
+    })
+    ElMessage.success(t(future ? 'notices.scheduleSuccess' : 'notices.publishSuccess'))
+    publishVisible.value = false
+    loadNotices()
+  } catch (error) {
+    // 拦截器已提示
+  } finally {
+    publishing.value = false
   }
 }
 
@@ -475,5 +610,12 @@ async function deleteNotice(row) {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.publish-tip {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--app-text-secondary);
 }
 </style>

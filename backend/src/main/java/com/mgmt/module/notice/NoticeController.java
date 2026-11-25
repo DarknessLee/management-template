@@ -6,6 +6,7 @@ import com.mgmt.common.UserContext;
 import com.mgmt.module.notice.dto.NoticeReadStatsVO;
 import com.mgmt.module.notice.dto.NoticeReadVO;
 import com.mgmt.module.notice.dto.NoticeRequest;
+import com.mgmt.module.notice.dto.NoticeScheduleRequest;
 import com.mgmt.module.notice.entity.SysNotice;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
@@ -74,6 +75,14 @@ public class NoticeController {
     @OperationLog(module = "通知公告", action = "发布/下线公告")
     public Result<SysNotice> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         return Result.ok(noticeService.updateStatus(id, status));
+    }
+
+    @Operation(summary = "发布公告（支持定时发布与到期自动下线）")
+    @PutMapping("/{id}/schedule")
+    @RequirePermission("notice:edit")
+    @OperationLog(module = "通知公告", action = "发布公告")
+    public Result<SysNotice> schedule(@PathVariable Long id, @RequestBody NoticeScheduleRequest request) {
+        return Result.ok(noticeService.publish(id, request.getScheduledTime(), request.getExpireTime()));
     }
 
     @PutMapping("/{id}/pin")

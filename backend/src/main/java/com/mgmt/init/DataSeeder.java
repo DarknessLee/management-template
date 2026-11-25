@@ -66,6 +66,7 @@ public class DataSeeder implements ApplicationRunner {
         ensureMenuStructure();
         ensureRoleDataScope();
         ensureNoticePinned();
+        ensureNoticeSchedule();
         ensurePasswordUpdateTime();
         ensureColumn("sys_user", "must_change_password",
                 "ALTER TABLE sys_user ADD COLUMN must_change_password TINYINT NOT NULL DEFAULT 0 "
@@ -370,6 +371,18 @@ public class DataSeeder implements ApplicationRunner {
         jdbcTemplate.execute("ALTER TABLE sys_notice ADD COLUMN pinned TINYINT NOT NULL DEFAULT 0 "
                 + "COMMENT '是否置顶：1是 0否' AFTER status");
         log.info("公告表补充 pinned 字段");
+    }
+
+    /**
+     * 定时发布需要计划发布时间与到期时间两个字段，老库启动时补齐。
+     */
+    private void ensureNoticeSchedule() {
+        ensureColumn("sys_notice", "scheduled_time",
+                "ALTER TABLE sys_notice ADD COLUMN scheduled_time DATETIME DEFAULT NULL "
+                        + "COMMENT '计划发布时间，到点自动上线' AFTER publish_time");
+        ensureColumn("sys_notice", "expire_time",
+                "ALTER TABLE sys_notice ADD COLUMN expire_time DATETIME DEFAULT NULL "
+                        + "COMMENT '到期自动下线时间' AFTER scheduled_time");
     }
 
     /**

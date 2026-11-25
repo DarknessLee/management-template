@@ -153,6 +153,8 @@ CREATE TABLE IF NOT EXISTS sys_notice (
     status       TINYINT      NOT NULL DEFAULT 0 COMMENT '状态：1已发布 0已下线',
     pinned       TINYINT      NOT NULL DEFAULT 0 COMMENT '是否置顶：1是 0否',
     publish_time DATETIME     DEFAULT NULL COMMENT '最近一次发布时间',
+    scheduled_time DATETIME   DEFAULT NULL COMMENT '计划发布时间，到点自动上线',
+    expire_time  DATETIME     DEFAULT NULL COMMENT '到期自动下线时间',
     create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),

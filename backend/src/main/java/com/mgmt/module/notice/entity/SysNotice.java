@@ -41,6 +41,18 @@ public class SysNotice {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishTime;
 
+    /** 计划发布时间，到点由定时任务自动上线 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime scheduledTime;
+
+    /** 到期时间，到点由定时任务自动下线 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime expireTime;
+
+    /** 是否处于待发布（已定时但还没到点），仅列表展示用 */
+    @TableField(exist = false)
+    private Boolean scheduled;
+
     @TableField(fill = FieldFill.INSERT)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

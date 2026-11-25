@@ -47,6 +47,14 @@ export function updateNoticeStatusApi(id, status) {
   })
 }
 
+export function scheduleNoticeApi(id, data) {
+  return request({
+    url: `/notices/${id}/schedule`,
+    method: 'put',
+    data
+  })
+}
+
 export function updateNoticePinnedApi(id, pinned) {
   return request({
     url: `/notices/${id}/pin`,
