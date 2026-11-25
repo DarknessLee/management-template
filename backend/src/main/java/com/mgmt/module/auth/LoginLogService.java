@@ -60,6 +60,7 @@ public class LoginLogService {
     public LoginSecurityVO security() {
         LoginSecurityVO vo = new LoginSecurityVO();
         vo.setMaxFailCount(intValue(settingService.security().get("maxFailCount"), 5));
+        vo.setLockMinutes(intValue(settingService.security().get("lockMinutes"), 15));
 
         List<LoginSecurityVO.LockedAccount> accounts = new ArrayList<>();
         try (Cursor<String> cursor = redisTemplate.scan(ScanOptions.scanOptions()

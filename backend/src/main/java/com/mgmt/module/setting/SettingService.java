@@ -39,6 +39,7 @@ public class SettingService {
                 "passwordExpire", 90,
                 "lockOnFail", true,
                 "maxFailCount", 5,
+                "lockMinutes", 15,
                 "watermark", false);
         Map<String, Object> basic = Map.of(
                 "siteTitle", "后台管理系统",

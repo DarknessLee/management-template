@@ -14,6 +14,9 @@ public class LoginSecurityVO {
     /** 连续失败达到该次数后锁定 */
     private int maxFailCount;
 
+    /** 锁定时长（分钟） */
+    private int lockMinutes;
+
     private List<LockedAccount> lockedAccounts = new ArrayList<>();
 
     @Data

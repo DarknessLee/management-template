@@ -90,6 +90,18 @@
             <span style="margin-left: 8px;">{{ t('settings.times') }}</span>
             <span class="setting-hint">{{ t('settings.maxFailCountHint') }}</span>
           </el-form-item>
+          <el-form-item :label="t('settings.lockMinutes')">
+            <el-input-number
+              v-model="securityForm.lockMinutes"
+              :min="1"
+              :max="1440"
+              :step="1"
+              :disabled="!securityForm.lockOnFail"
+              style="width: 150px;"
+            />
+            <span style="margin-left: 8px;">{{ t('settings.minutes') }}</span>
+            <span class="setting-hint">{{ t('settings.lockMinutesHint') }}</span>
+          </el-form-item>
           <el-form-item :label="t('settings.watermark')">
             <el-switch v-model="securityForm.watermark" />
             <span class="setting-hint">{{ t('settings.watermarkHint') }}</span>
@@ -169,6 +181,7 @@ const defaultSecurity = {
   passwordExpire: 90,
   lockOnFail: true,
   maxFailCount: 5,
+  lockMinutes: 15,
   watermark: false
 }
 

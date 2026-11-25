@@ -77,11 +77,12 @@ public class AuthService {
         Map<String, Object> security = settingService.security();
         boolean lockOnFail = boolValue(security, "lockOnFail", true);
         int maxFailure = intValue(security, "maxFailCount", maxFail);
+        int lockMinutes = intValue(security, "lockMinutes", failWindowMinutes);
 
         String failKey = FAIL_KEY_PREFIX + request.getUsername();
         int fails = currentFails(failKey);
         if (lockOnFail && fails >= maxFailure) {
-            String message = I18n.get("auth.tooManyFailures", remainingMinutes(failKey));
+            String message = I18n.get("auth.tooManyFailures", remainingMinutes(failKey, lockMinutes));
             loginAuditService.recordFailure(request.getUsername(), null, message);
             throw new BizException(400, message);
         }
@@ -96,9 +97,9 @@ public class AuthService {
                 loginAuditService.recordFailure(request.getUsername(), userId, message);
                 throw new BizException(400, message);
             }
-            int remaining = recordFailure(failKey, fails, maxFailure);
+            int remaining = recordFailure(failKey, fails, maxFailure, lockMinutes);
             String message = remaining <= 0
-                    ? I18n.get("auth.tooManyFailures", failWindowMinutes)
+                    ? I18n.get("auth.tooManyFailures", lockMinutes)
                     : I18n.get("auth.badCredentialsRemaining", remaining);
             // 日志里记录稳定的失败原因，避免“剩余次数”差异导致统计被拆散
             loginAuditService.recordFailure(request.getUsername(), userId, I18n.get("auth.badCredentials"));
@@ -253,10 +254,10 @@ public class AuthService {
      * 失败计数写在 Redis：过期即自动解锁，无需定时任务清理。
      * 只有第一次失败时设置过期时间，后续失败只做自增，避免每次失败都把窗口往后推。
      */
-    private int recordFailure(String key, int currentFails, int maxFailure) {
+    private int recordFailure(String key, int currentFails, int maxFailure, int lockMinutes) {
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {
-            redisTemplate.expire(key, Duration.ofMinutes(failWindowMinutes));
+            redisTemplate.expire(key, Duration.ofMinutes(lockMinutes));
         }
         int total = count == null ? currentFails + 1 : count.intValue();
         return Math.max(maxFailure - total, 0);
@@ -272,10 +273,10 @@ public class AuthService {
         return value instanceof Boolean bool ? bool : fallback;
     }
 
-    private long remainingMinutes(String key) {
+    private long remainingMinutes(String key, int fallbackMinutes) {
         Long seconds = redisTemplate.getExpire(key, TimeUnit.SECONDS);
         if (seconds == null || seconds < 0) {
-            return failWindowMinutes;
+            return fallbackMinutes;
         }
         return Math.max((seconds + 59) / 60, 1);
     }

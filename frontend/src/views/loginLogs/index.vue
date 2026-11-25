@@ -36,7 +36,7 @@
       <div class="security-header">
         <div>
           <h3 class="security-title">{{ t('loginLogs.securityTitle') }}</h3>
-          <p class="security-tip">{{ t('loginLogs.securityTip', { count: security.maxFailCount }) }}</p>
+          <p class="security-tip">{{ t('loginLogs.securityTip', { count: security.maxFailCount, minutes: security.lockMinutes }) }}</p>
         </div>
         <el-button size="small" @click="loadSecurity">{{ t('common.refresh') }}</el-button>
       </div>
