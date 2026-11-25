@@ -2,6 +2,7 @@ package com.mgmt.module.file;
 
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
+import com.mgmt.module.file.dto.FileStatsVO;
 import com.mgmt.module.file.dto.FileVO;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
@@ -42,6 +43,13 @@ public class FileController {
                                            @RequestParam(required = false) String keyword,
                                            @RequestParam(required = false) String type) {
         return Result.ok(fileService.page(page, size, keyword, type));
+    }
+
+    @Operation(summary = "文件统计")
+    @GetMapping("/stats")
+    @RequirePermission("file:view")
+    public Result<FileStatsVO> stats() {
+        return Result.ok(fileService.stats());
     }
 
     @Operation(summary = "上传文件")

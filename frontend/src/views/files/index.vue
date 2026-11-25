@@ -26,6 +26,27 @@
       </div>
     </div>
 
+    <div class="stat-grid">
+      <div class="stat-card">
+        <p class="stat-label">{{ t('files.stats.totalFiles') }}</p>
+        <p class="stat-value">{{ stats.totalFiles }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('files.stats.totalSize') }}</p>
+        <p class="stat-value">{{ formatSize(stats.totalSize) }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('files.stats.typeTop') }}</p>
+        <ul v-if="stats.types.length" class="type-list">
+          <li v-for="item in stats.types" :key="item.type">
+            <span class="type-name">{{ typeLabel(item.type) }}</span>
+            <span class="type-count">{{ t('files.stats.fileCount', { count: item.count }) }}</span>
+          </li>
+        </ul>
+        <p v-else class="type-empty">{{ t('files.stats.noData') }}</p>
+      </div>
+    </div>
+
     <div class="card">
       <div class="search-bar">
         <el-input
@@ -132,7 +153,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import { getFilesApi, uploadFileApi, deleteFileApi, deleteFilesApi, downloadFileApi, previewFileApi } from '@/api/file'
+import { getFilesApi, getFileStatsApi, uploadFileApi, deleteFileApi, deleteFilesApi, downloadFileApi, previewFileApi } from '@/api/file'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from 'vue-i18n'
 
@@ -155,6 +176,11 @@ const typeOptions = computed(() => [
 ])
 
 const files = ref([])
+const stats = ref({
+  totalFiles: 0,
+  totalSize: 0,
+  types: []
+})
 const keyword = ref('')
 const typeFilter = ref('')
 const selectedIds = ref([])
@@ -172,7 +198,28 @@ const pagination = reactive({
 
 onMounted(() => {
   loadFiles()
+  loadStats()
 })
+
+async function loadStats() {
+  try {
+    const res = await getFileStatsApi()
+    stats.value = res.data
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function typeLabel(type) {
+  const keyMap = {
+    image: 'files.typeImage',
+    pdf: 'files.typePdf',
+    office: 'files.typeOffice',
+    text: 'files.typeText',
+    archive: 'files.typeArchive'
+  }
+  return t(keyMap[type] || 'files.stats.other')
+}
 
 async function loadFiles() {
   loading.value = true
@@ -231,6 +278,7 @@ async function handleUpload({ file }) {
     ElMessage.success(t('files.uploadSuccess'))
     pagination.page = 1
     loadFiles()
+    loadStats()
   } catch (error) {
     // 拦截器已提示
   } finally {
@@ -259,6 +307,7 @@ async function removeFile(row) {
     ElMessage.success(t('common.deleteSuccess'))
     selectedIds.value = []
     loadFiles()
+    loadStats()
   } catch (error) {
     // 拦截器已提示
   }
@@ -280,6 +329,7 @@ async function removeSelected() {
     ElMessage.success(t('common.deleteSuccess'))
     selectedIds.value = []
     loadFiles()
+    loadStats()
   } catch (error) {
     // 拦截器已提示
   }
@@ -402,6 +452,59 @@ function formatSize(size) {
 
 .tip {
   margin-top: 12px;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--app-bg-container);
+  border: 1px solid var(--app-border);
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.stat-value {
+  margin: 10px 0 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.type-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.type-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--app-text-primary);
+}
+
+.type-count {
+  color: var(--app-text-secondary);
+}
+
+.type-empty {
+  margin: 12px 0 0;
   font-size: 13px;
   color: var(--app-text-secondary);
 }

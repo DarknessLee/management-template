@@ -2,11 +2,13 @@ package com.mgmt.module.file;
 
 import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.file.dto.FileStatsVO;
 import com.mgmt.module.file.dto.FileVO;
 import com.mgmt.module.file.entity.SysFile;
 import com.mgmt.module.file.mapper.SysFileMapper;
@@ -24,6 +26,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,6 +81,38 @@ public class FileService {
 
         IPage<SysFile> result = fileMapper.selectPage(new Page<>(page, size), wrapper);
         return PageResult.of(result, result.getRecords().stream().map(this::toVO).toList());
+    }
+
+    public FileStatsVO stats() {
+        FileStatsVO vo = new FileStatsVO();
+
+        QueryWrapper<SysFile> sumWrapper = new QueryWrapper<>();
+        sumWrapper.select("COUNT(*) AS cnt", "COALESCE(SUM(size), 0) AS total_size");
+        Map<String, Object> row = fileMapper.selectMaps(sumWrapper).get(0);
+        long total = ((Number) row.get("cnt")).longValue();
+        vo.setTotalFiles(total);
+        vo.setTotalSize(((Number) row.get("total_size")).longValue());
+
+        List<FileStatsVO.TypeCount> types = new ArrayList<>();
+        long categorized = 0;
+        for (Map.Entry<String, List<String>> entry : TYPE_EXTENSIONS.entrySet()) {
+            LambdaQueryWrapper<SysFile> wrapper = new LambdaQueryWrapper<>();
+            applyTypeFilter(wrapper, entry.getKey());
+            long count = fileMapper.selectCount(wrapper);
+            if (count > 0) {
+                types.add(new FileStatsVO.TypeCount(entry.getKey(), count));
+                categorized += count;
+            }
+        }
+        long other = Math.max(0, total - categorized);
+        if (other > 0) {
+            types.add(new FileStatsVO.TypeCount("other", other));
+        }
+        vo.setTypes(types.stream()
+                .sorted(Comparator.comparingLong(FileStatsVO.TypeCount::getCount).reversed())
+                .limit(3)
+                .toList());
+        return vo;
     }
 
     public FileVO store(MultipartFile file) {

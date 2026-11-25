@@ -8,6 +8,13 @@ export function getFilesApi(params) {
   })
 }
 
+export function getFileStatsApi() {
+  return request({
+    url: '/files/stats',
+    method: 'get'
+  })
+}
+
 export function uploadFileApi(file) {
   const data = new FormData()
   data.append('file', file)

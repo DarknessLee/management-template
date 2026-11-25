@@ -563,6 +563,14 @@ export default {
     preview: '预览',
     download: '下载',
     delete: '删除',
+    stats: {
+      totalFiles: '文件总数',
+      totalSize: '占用空间',
+      typeTop: '类型分布 Top3',
+      fileCount: '{count} 个',
+      other: '其他',
+      noData: '暂无文件'
+    },
     tip: '支持图片、PDF、Office 文档、文本和压缩包，单个文件不超过 20MB。',
     previewAlt: '文件预览',
     pdfPreview: 'PDF 预览',

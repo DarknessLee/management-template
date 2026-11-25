@@ -563,6 +563,14 @@ export default {
     preview: 'Preview',
     download: 'Download',
     delete: 'Delete',
+    stats: {
+      totalFiles: 'Total Files',
+      totalSize: 'Storage Used',
+      typeTop: 'Top 3 Types',
+      fileCount: '{count}',
+      other: 'Other',
+      noData: 'No files yet'
+    },
     tip: 'Supports images, PDF, Office documents, text and archives. Each file must not exceed 20MB.',
     previewAlt: 'File preview',
     pdfPreview: 'PDF preview',
