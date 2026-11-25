@@ -26,6 +26,21 @@ public interface SysOperationLogMapper extends BaseMapper<SysOperationLog> {
     List<Map<String, Object>> countByModule(@Param("start") LocalDateTime start);
 
     /**
+     * 近 7 天每日操作次数及成功数量，用于仪表盘趋势图。
+     * 只返回有数据的日期，缺失日期在 Service 里补 0。
+     */
+    @Select("""
+            SELECT DATE(create_time) AS day,
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS successCnt
+            FROM sys_operation_log
+            WHERE create_time >= #{start}
+            GROUP BY DATE(create_time)
+            ORDER BY day
+            """)
+    List<Map<String, Object>> countOperationByDay(@Param("start") LocalDateTime start);
+
+    /**
      * 分批删除过期日志。带上 LIMIT 后，InnoDB 命中 create_time 索引扫到足够行数就停止，
      * 不会一次锁住整张表；没有 ORDER BY 也能工作，排序反而会让索引利用变差。
      */

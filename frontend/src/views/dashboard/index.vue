@@ -173,6 +173,118 @@
       </div>
     </section>
 
+    <section class="chart-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">{{ t('dashboard.operationTrend') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.operationTrendSubtitle') }}</p>
+          </div>
+          <div class="chart-legend-group">
+            <span class="chart-legend"><i class="legend-success"></i>{{ t('dashboard.success') }}</span>
+            <span class="chart-legend"><i class="legend-failed"></i>{{ t('dashboard.failed') }}</span>
+          </div>
+        </div>
+        <div class="trend-wrapper">
+          <svg class="trend-svg" viewBox="0 0 640 220" role="img" :aria-label="t('dashboard.operationAria')">
+            <line
+              v-for="line in operationChart.grid"
+              :key="`op-grid-${line.y}`"
+              :x1="operationChart.padLeft"
+              :x2="operationChart.width - 16"
+              :y1="line.y"
+              :y2="line.y"
+              stroke="var(--app-border)"
+              stroke-dasharray="4 4"
+            />
+            <text
+              v-for="line in operationChart.grid"
+              :key="`op-label-${line.y}`"
+              :x="operationChart.padLeft - 8"
+              :y="line.y + 4"
+              text-anchor="end"
+              class="axis-text"
+            >{{ line.value }}</text>
+            <g v-for="bar in operationChart.bars" :key="bar.key">
+              <rect
+                :x="bar.x"
+                :y="bar.successY"
+                :width="operationChart.barWidth"
+                :height="bar.successHeight"
+                rx="3"
+                fill="#67C23A"
+              >
+                <title>{{ t('dashboard.operationBarTitle', { label: bar.label, success: bar.success, failed: bar.failed }) }}</title>
+              </rect>
+              <rect
+                :x="bar.x"
+                :y="bar.y"
+                :width="operationChart.barWidth"
+                :height="bar.failedHeight"
+                rx="3"
+                fill="#F56C6C"
+              >
+                <title>{{ t('dashboard.operationBarTitle', { label: bar.label, success: bar.success, failed: bar.failed }) }}</title>
+              </rect>
+              <text :x="bar.x + operationChart.barWidth / 2" :y="bar.y - 6" text-anchor="middle" class="point-value">
+                {{ bar.total }}
+              </text>
+              <text :x="bar.x + operationChart.barWidth / 2" :y="operationChart.height - 8" text-anchor="middle" class="axis-text">
+                {{ bar.label }}
+              </text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">{{ t('dashboard.roleDistribution') }}</h3>
+            <p class="card-subtitle">{{ t('dashboard.roleSubtitle') }}</p>
+          </div>
+        </div>
+        <div v-if="data.roleDistribution.length" class="donut-wrapper">
+          <svg class="donut-svg" viewBox="0 0 160 160" role="img" :aria-label="t('dashboard.roleAria')">
+            <circle
+              cx="80"
+              cy="80"
+              :r="roleChart.radius"
+              fill="none"
+              stroke="var(--app-hover-bg)"
+              :stroke-width="roleChart.stroke"
+            />
+            <circle
+              v-for="segment in roleChart.segments"
+              :key="segment.name"
+              cx="80"
+              cy="80"
+              :r="roleChart.radius"
+              fill="none"
+              :stroke="segment.color"
+              :stroke-width="roleChart.stroke"
+              :stroke-dasharray="segment.dasharray"
+              :stroke-dashoffset="segment.dashoffset"
+              transform="rotate(-90 80 80)"
+            >
+              <title>{{ t('dashboard.roleTooltip', { name: segment.name, value: segment.value, percent: segment.percent }) }}</title>
+            </circle>
+            <text x="80" y="76" text-anchor="middle" class="donut-total">{{ roleChart.total }}</text>
+            <text x="80" y="94" text-anchor="middle" class="donut-label">{{ t('dashboard.totalUsers') }}</text>
+          </svg>
+          <ul class="donut-legend">
+            <li v-for="segment in roleChart.segments" :key="`legend-${segment.name}`">
+              <span class="legend-dot" :style="{ background: segment.color }"></span>
+              <span class="legend-name">{{ segment.name }}</span>
+              <span class="legend-value">{{ segment.value }}</span>
+              <span class="legend-percent">{{ segment.percent }}%</span>
+            </li>
+          </ul>
+        </div>
+        <el-empty v-else :description="t('dashboard.noRoleData')" :image-size="72" />
+      </div>
+    </section>
+
     <section class="bottom-grid">
       <div class="card">
         <div class="card-header">
@@ -282,7 +394,9 @@ const data = ref({
   failedOperations: 0,
   avgLoginTime: '—',
   loginTrend: [],
+  operationTrend: [],
   operationModules: [],
+  roleDistribution: [],
   recentOperations: [],
   latestNotices: []
 })
@@ -291,7 +405,6 @@ const noticeVisible = ref(false)
 const currentNotice = ref({ title: '', content: '', publishTime: '' })
 
 const moduleColors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#9254DE', '#36CFC9']
-
 const displayName = computed(() => {
   const info = userStore.userInfo || {}
   return info.realName || info.username || t('dashboard.admin')
@@ -351,6 +464,69 @@ const chart = computed(() => {
   }))
 
   return { width, height, padLeft, points, linePath, areaPath, grid }
+})
+
+const operationChart = computed(() => {
+  const list = data.value.operationTrend || []
+  const width = 640
+  const height = 220
+  const padLeft = 36
+  const innerWidth = width - padLeft - 16
+  const top = 24
+  const innerHeight = 150
+  const max = Math.max(...list.map(item => item.success + item.failed), 4)
+  const band = list.length ? innerWidth / list.length : innerWidth
+  const barWidth = Math.min(30, band * 0.45)
+  const baseline = top + innerHeight
+
+  const bars = list.map((item, index) => {
+    const total = item.success + item.failed
+    const totalHeight = (total / max) * innerHeight
+    const successHeight = total ? (item.success / total) * totalHeight : 0
+    return {
+      key: item.label,
+      label: item.label,
+      total,
+      success: item.success,
+      failed: item.failed,
+      x: padLeft + band * index + (band - barWidth) / 2,
+      y: baseline - totalHeight,
+      successY: baseline - successHeight,
+      successHeight,
+      failedHeight: totalHeight - successHeight
+    }
+  })
+  const grid = [0, 1, 2, 3].map(index => ({
+    y: top + (innerHeight / 3) * index,
+    value: Math.round(max - (max / 3) * index)
+  }))
+
+  return { width, height, padLeft, bars, grid, barWidth }
+})
+
+const roleChart = computed(() => {
+  const list = data.value.roleDistribution || []
+  const total = list.reduce((sum, item) => sum + item.value, 0)
+  const radius = 52
+  const stroke = 18
+  const circumference = 2 * Math.PI * radius
+  let consumed = 0
+
+  const segments = list.map((item, index) => {
+    const ratio = total ? item.value / total : 0
+    const segment = {
+      name: item.name,
+      value: item.value,
+      percent: total ? Math.round(ratio * 1000) / 10 : 0,
+      color: moduleColors[index % moduleColors.length],
+      dasharray: `${(ratio * circumference).toFixed(2)} ${circumference.toFixed(2)}`,
+      dashoffset: (-consumed * circumference).toFixed(2)
+    }
+    consumed += ratio
+    return segment
+  })
+
+  return { total, radius, stroke, segments }
 })
 
 const maxModuleValue = computed(() =>
@@ -648,6 +824,95 @@ async function loadDashboard() {
   background: #409eff;
 }
 
+.chart-legend-group {
+  display: flex;
+  gap: 14px;
+}
+
+.chart-legend i.legend-success {
+  background: #67c23a;
+}
+
+.chart-legend i.legend-failed {
+  background: #f56c6c;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.donut-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  min-height: 200px;
+}
+
+.donut-svg {
+  width: 168px;
+  height: 168px;
+  flex-shrink: 0;
+}
+
+.donut-total {
+  font-size: 22px;
+  font-weight: 700;
+  fill: var(--app-text-primary);
+}
+
+.donut-label {
+  font-size: 11px;
+  fill: var(--app-text-placeholder);
+}
+
+.donut-legend {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-text-regular);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.legend-value {
+  color: var(--app-text-primary);
+  font-weight: 600;
+}
+
+.legend-percent {
+  width: 44px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--app-text-placeholder);
+}
+
 .trend-wrapper {
   width: 100%;
 }
@@ -906,6 +1171,7 @@ async function loadDashboard() {
 
 @media (max-width: 900px) {
   .main-grid,
+  .chart-grid,
   .bottom-grid {
     grid-template-columns: 1fr;
   }

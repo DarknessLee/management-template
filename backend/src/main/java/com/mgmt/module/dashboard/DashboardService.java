@@ -88,10 +88,33 @@ public class DashboardService {
                 .toList();
         vo.setLoginTrend(trend);
 
+        Map<LocalDate, long[]> operationByDay = operationLogMapper.countOperationByDay(start).stream()
+                .collect(Collectors.toMap(
+                        row -> toLocalDate(row.get("day")),
+                        row -> {
+                            long total = ((Number) row.get("total")).longValue();
+                            long success = ((Number) row.get("successCnt")).longValue();
+                            return new long[]{success, total - success};
+                        }));
+        // 与登录趋势保持一致，补齐近 7 天没有操作的日期
+        vo.setOperationTrend(IntStream.range(0, TREND_DAYS)
+                .mapToObj(offset -> {
+                    LocalDate date = today.minusDays(TREND_DAYS - 1L - offset);
+                    long[] counts = operationByDay.getOrDefault(date, new long[]{0L, 0L});
+                    return new DashboardVO.OperationTrendPoint(date.format(DAY_LABEL), counts[0], counts[1]);
+                })
+                .toList());
+
         vo.setOperationModules(operationLogMapper.countByModule(start).stream()
                 .map(row -> new DashboardVO.ModuleCount(
                         String.valueOf(row.get("name")),
                         ((Number) row.get("cnt")).longValue()))
+                .toList());
+
+        vo.setRoleDistribution(userMapper.countUsersByRole().stream()
+                .map(row -> new DashboardVO.RoleCount(
+                        String.valueOf(row.get("name")),
+                        ((Number) row.get("value")).longValue()))
                 .toList());
 
         vo.setRecentOperations(operationLogMapper.selectList(new LambdaQueryWrapper<SysOperationLog>()

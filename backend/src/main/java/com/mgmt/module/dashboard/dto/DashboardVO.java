@@ -33,6 +33,12 @@ public class DashboardVO {
     /** 近 7 天操作次数按模块分布 */
     private List<ModuleCount> operationModules = new ArrayList<>();
 
+    /** 近 7 天每日操作次数，含成功/失败拆分 */
+    private List<OperationTrendPoint> operationTrend = new ArrayList<>();
+
+    /** 用户按角色分布 */
+    private List<RoleCount> roleDistribution = new ArrayList<>();
+
     private List<RecentOperation> recentOperations = new ArrayList<>();
 
     private List<NoticeBrief> latestNotices = new ArrayList<>();
@@ -54,6 +60,30 @@ public class DashboardVO {
         private long value;
 
         public ModuleCount(String name, long value) {
+            this.name = name;
+            this.value = value;
+        }
+    }
+
+    @Data
+    public static class OperationTrendPoint {
+        private String label;
+        private long success;
+        private long failed;
+
+        public OperationTrendPoint(String label, long success, long failed) {
+            this.label = label;
+            this.success = success;
+            this.failed = failed;
+        }
+    }
+
+    @Data
+    public static class RoleCount {
+        private String name;
+        private long value;
+
+        public RoleCount(String name, long value) {
             this.name = name;
             this.value = value;
         }
