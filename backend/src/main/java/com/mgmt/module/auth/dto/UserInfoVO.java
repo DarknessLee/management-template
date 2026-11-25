@@ -18,4 +18,7 @@ public class UserInfoVO {
     private List<String> permissions;
 
     private String avatar;
+
+    /** 密码已超过策略有效期，前端需强制弹出修改密码窗口 */
+    private Boolean mustChangePassword;
 }

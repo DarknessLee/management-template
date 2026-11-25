@@ -40,6 +40,12 @@ export default {
     rememberMe: 'Remember me for 7 days',
     success: 'Signed in successfully'
   },
+  forcePassword: {
+    title: 'Password expired',
+    tip: 'For account security, your password has expired. Please change it first, then sign in again with the new password.',
+    submit: 'Confirm',
+    success: 'Password changed, please sign in again with the new password'
+  },
   header: {
     toggleTheme: 'Toggle theme',
     toggleLanguage: 'Switch language',
@@ -79,6 +85,13 @@ export default {
     loginTimeoutHint: 'Session validity; re-login is required after timeout',
     minute: 'min',
     passwordExpire: 'Password validity',
+    passwordExpireHint: '0 means never expires; expired users must change the password after signing in',
+    passwordPolicyEnabled: 'Password policy',
+    passwordPolicyEnabledHint: 'When enabled, password rules apply to user creation, reset and change',
+    passwordMinLength: 'Minimum length',
+    characters: 'chars',
+    passwordRequireComplexity: 'Letters + digits',
+    passwordRequireComplexityHint: 'Passwords must contain both letters and digits',
     day: 'days',
     lockOnFail: 'Lock on failed login',
     lockOnFailHint: 'When disabled, failed attempts are not limited',

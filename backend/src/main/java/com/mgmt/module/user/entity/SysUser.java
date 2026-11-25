@@ -25,6 +25,10 @@ public class SysUser {
     @JsonIgnore
     private String password;
 
+    /** 密码最近修改时间，密码策略有效期从这里开始计算 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime passwordUpdateTime;
+
     private String realName;
 
     private String email;

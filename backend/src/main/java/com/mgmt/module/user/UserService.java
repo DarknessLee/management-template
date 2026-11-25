@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,6 +39,7 @@ public class UserService {
     private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
     private final DataScopeService dataScopeService;
+    private final PasswordPolicyService passwordPolicyService;
 
     public PageResult<UserVO> page(long page, long size, String keyword) {
         LambdaQueryWrapper<SysUser> wrapper = searchWrapper(keyword);
@@ -97,7 +99,10 @@ public class UserService {
         SysUser user = new SysUser();
         user.setUsername(req.getUsername());
         user.setRealName(req.getRealName());
+        // 新增（含 Excel 导入）与重置密码都按当前密码策略校验
+        passwordPolicyService.validate(req.getPassword());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setPasswordUpdateTime(LocalDateTime.now());
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
         user.setRoleId(requireRole(req.getRole()).getId());
@@ -127,7 +132,9 @@ public class UserService {
             user.setRealName(req.getRealName());
         }
         if (StringUtils.hasText(req.getPassword())) {
+            passwordPolicyService.validate(req.getPassword());
             user.setPassword(passwordEncoder.encode(req.getPassword()));
+            user.setPasswordUpdateTime(LocalDateTime.now());
         }
         if (req.getEmail() != null) {
             user.setEmail(req.getEmail());

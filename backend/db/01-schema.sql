@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     username    VARCHAR(50)  NOT NULL COMMENT '登录名',
     password    VARCHAR(100) NOT NULL COMMENT 'BCrypt 加密后的密码',
+    password_update_time DATETIME DEFAULT NULL COMMENT '密码最近修改时间',
     real_name   VARCHAR(50)  NOT NULL COMMENT '姓名',
     email       VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
     phone       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',

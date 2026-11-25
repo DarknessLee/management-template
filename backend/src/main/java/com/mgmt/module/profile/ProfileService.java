@@ -7,6 +7,7 @@ import com.mgmt.module.profile.dto.ChangePasswordRequest;
 import com.mgmt.module.profile.dto.ProfileVO;
 import com.mgmt.module.profile.dto.UpdateProfileRequest;
 import com.mgmt.module.auth.AuthService;
+import com.mgmt.module.user.PasswordPolicyService;
 import com.mgmt.module.user.entity.SysUser;
 import com.mgmt.module.user.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -32,6 +34,7 @@ public class ProfileService {
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+    private final PasswordPolicyService passwordPolicyService;
 
     @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
@@ -63,7 +66,9 @@ public class ProfileService {
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
             throw new BizException(400, I18n.get("profile.samePassword"));
         }
+        passwordPolicyService.validate(request.getNewPassword());
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
         authService.invalidateAllSessions(user.getId());
     }

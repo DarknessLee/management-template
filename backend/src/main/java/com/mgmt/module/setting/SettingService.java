@@ -33,6 +33,9 @@ public class SettingService {
     public static Map<String, Object> defaults() {
         Map<String, Object> security = Map.of(
                 "loginTimeout", 30,
+                "passwordPolicyEnabled", false,
+                "passwordMinLength", 8,
+                "passwordRequireComplexity", true,
                 "passwordExpire", 90,
                 "lockOnFail", true,
                 "maxFailCount", 5,

@@ -178,6 +178,8 @@
     </el-dialog>
 
     <Watermark v-if="siteStore.config.watermark" :text="watermarkText" />
+
+    <ForcePasswordDialog :visible="showForcePassword" />
   </div>
 </template>
 
@@ -193,6 +195,7 @@ import { assetUrl } from '@/utils/asset'
 import { localizedTitle } from '@/utils/title'
 import TagsView from './components/TagsView.vue'
 import Watermark from './components/Watermark.vue'
+import ForcePasswordDialog from './components/ForcePasswordDialog.vue'
 import { useSiteStore } from '@/stores/site'
 import { 
   Odometer, 
@@ -290,6 +293,9 @@ const icons = {
 }
 
 const activeMenu = computed(() => route.path)
+
+// 密码超过策略有效期时，弹出不可关闭的改密窗口，改完才允许继续使用系统
+const showForcePassword = computed(() => userStore.userInfo?.mustChangePassword === true)
 
 const currentPageTitle = computed(() => localizedTitle(route.meta, siteStore.locale))
 

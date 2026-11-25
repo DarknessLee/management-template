@@ -30,6 +30,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,7 @@ public class DataSeeder implements ApplicationRunner {
         ensureMenuStructure();
         ensureRoleDataScope();
         ensureNoticePinned();
+        ensurePasswordUpdateTime();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedDicts();
@@ -362,6 +364,26 @@ public class DataSeeder implements ApplicationRunner {
         log.info("公告表补充 pinned 字段");
     }
 
+    /**
+     * 密码策略需要记录密码修改时间。老库补字段时用创建时间回填，
+     * 避免升级后所有历史账号立刻被判定为密码过期。
+     */
+    private void ensurePasswordUpdateTime() {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'sys_user' "
+                        + "AND column_name = 'password_update_time'",
+                Integer.class);
+        if (count != null && count > 0) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN password_update_time DATETIME DEFAULT NULL "
+                + "COMMENT '密码最近修改时间' AFTER password");
+        jdbcTemplate.update("UPDATE sys_user SET password_update_time = create_time "
+                + "WHERE password_update_time IS NULL");
+        log.info("用户表补充 password_update_time 字段");
+    }
+
     private SysMenu createMenu(Long parentId, String path, String title, String component, String icon,
                                String permission, int sort) {
         SysMenu menu = new SysMenu();
@@ -550,6 +572,7 @@ public class DataSeeder implements ApplicationRunner {
         user.setRoleId(roleId);
         user.setStatus(status);
         user.setPassword(passwordEncoder.encode("123456"));
+        user.setPasswordUpdateTime(LocalDateTime.now());
         userMapper.insert(user);
     }
 }

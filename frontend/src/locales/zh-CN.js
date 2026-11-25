@@ -40,6 +40,12 @@ export default {
     rememberMe: '记住我（7 天内免登录）',
     success: '登录成功'
   },
+  forcePassword: {
+    title: '密码已过期',
+    tip: '为了账号安全，密码已超过有效期。请先修改密码，修改成功后使用新密码重新登录。',
+    submit: '确认修改',
+    success: '密码已修改，请使用新密码重新登录'
+  },
   header: {
     toggleTheme: '切换主题',
     toggleLanguage: '切换语言',
@@ -79,6 +85,13 @@ export default {
     loginTimeoutHint: '会话有效期，超时后需重新登录',
     minute: '分钟',
     passwordExpire: '密码有效期',
+    passwordExpireHint: '0 表示永不过期；超期用户登录后会强制修改密码',
+    passwordPolicyEnabled: '密码策略',
+    passwordPolicyEnabledHint: '开启后新增用户、重置密码和修改密码都会校验密码规则',
+    passwordMinLength: '密码最小长度',
+    characters: '位',
+    passwordRequireComplexity: '字母+数字',
+    passwordRequireComplexityHint: '要求密码同时包含字母和数字',
     day: '天',
     lockOnFail: '登录失败锁定',
     lockOnFailHint: '关闭后不限制登录失败次数',

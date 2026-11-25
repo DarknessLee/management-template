@@ -16,6 +16,7 @@ import com.mgmt.module.role.PermissionService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
 import com.mgmt.module.setting.SettingService;
+import com.mgmt.module.user.PasswordPolicyService;
 import com.mgmt.module.user.entity.SysUser;
 import com.mgmt.module.user.mapper.SysUserMapper;
 import com.mgmt.security.AuthInterceptor;
@@ -52,6 +53,7 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final CaptchaService captchaService;
     private final SettingService settingService;
+    private final PasswordPolicyService passwordPolicyService;
     private final MessageService messageService;
     private final MessageSocketRegistry messageSocketRegistry;
 
@@ -188,6 +190,7 @@ public class AuthService {
         vo.setRole(role == null ? "" : role.getCode());
         vo.setPermissions(permissionService.permissionsOf(user.getId()));
         vo.setAvatar(user.getAvatar() == null ? "" : user.getAvatar());
+        vo.setMustChangePassword(passwordPolicyService.isExpired(user.getPasswordUpdateTime()));
         return vo;
     }
 

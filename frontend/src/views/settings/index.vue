@@ -41,15 +41,39 @@
             <span style="margin-left: 8px;">{{ t('settings.minute') }}</span>
             <span class="setting-hint">{{ t('settings.loginTimeoutHint') }}</span>
           </el-form-item>
+          <el-form-item :label="t('settings.passwordPolicyEnabled')">
+            <el-switch v-model="securityForm.passwordPolicyEnabled" />
+            <span class="setting-hint">{{ t('settings.passwordPolicyEnabledHint') }}</span>
+          </el-form-item>
+          <el-form-item :label="t('settings.passwordMinLength')">
+            <el-input-number
+              v-model="securityForm.passwordMinLength"
+              :min="6"
+              :max="20"
+              :step="1"
+              :disabled="!securityForm.passwordPolicyEnabled"
+              style="width: 150px;"
+            />
+            <span style="margin-left: 8px;">{{ t('settings.characters') }}</span>
+          </el-form-item>
+          <el-form-item :label="t('settings.passwordRequireComplexity')">
+            <el-switch
+              v-model="securityForm.passwordRequireComplexity"
+              :disabled="!securityForm.passwordPolicyEnabled"
+            />
+            <span class="setting-hint">{{ t('settings.passwordRequireComplexityHint') }}</span>
+          </el-form-item>
           <el-form-item :label="t('settings.passwordExpire')">
             <el-input-number 
               v-model="securityForm.passwordExpire" 
-              :min="7" 
+              :min="0" 
               :max="365" 
               :step="7"
+              :disabled="!securityForm.passwordPolicyEnabled"
               style="width: 150px;"
             />
             <span style="margin-left: 8px;">{{ t('settings.day') }}</span>
+            <span class="setting-hint">{{ t('settings.passwordExpireHint') }}</span>
           </el-form-item>
           <el-form-item :label="t('settings.lockOnFail')">
             <el-switch v-model="securityForm.lockOnFail" />
@@ -139,6 +163,9 @@ import { localizedTitle } from '@/utils/title'
 // 与后端 SettingService.defaults() 保持一致
 const defaultSecurity = {
   loginTimeout: 30,
+  passwordPolicyEnabled: false,
+  passwordMinLength: 8,
+  passwordRequireComplexity: true,
   passwordExpire: 90,
   lockOnFail: true,
   maxFailCount: 5,
