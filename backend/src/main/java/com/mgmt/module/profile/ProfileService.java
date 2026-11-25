@@ -69,6 +69,7 @@ public class ProfileService {
         passwordPolicyService.validate(request.getNewPassword());
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setPasswordUpdateTime(LocalDateTime.now());
+        user.setMustChangePassword(0);
         userMapper.updateById(user);
         authService.invalidateAllSessions(user.getId());
     }

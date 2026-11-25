@@ -67,6 +67,9 @@ public class DataSeeder implements ApplicationRunner {
         ensureRoleDataScope();
         ensureNoticePinned();
         ensurePasswordUpdateTime();
+        ensureColumn("sys_user", "must_change_password",
+                "ALTER TABLE sys_user ADD COLUMN must_change_password TINYINT NOT NULL DEFAULT 0 "
+                        + "COMMENT '下次登录是否必须改密：1是 0否' AFTER password_update_time");
         ensureLoginLogSecurityColumns();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();

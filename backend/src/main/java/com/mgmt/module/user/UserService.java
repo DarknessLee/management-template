@@ -2,17 +2,20 @@ package com.mgmt.module.user;
 
 import com.mgmt.common.I18n;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.auth.AuthService;
 import com.mgmt.module.dept.entity.SysDept;
 import com.mgmt.module.dept.mapper.SysDeptMapper;
 import com.mgmt.module.role.DataScopeService;
 import com.mgmt.module.role.entity.SysRole;
 import com.mgmt.module.role.mapper.SysRoleMapper;
 import com.mgmt.module.user.dto.UserCreateRequest;
+import com.mgmt.module.user.dto.UserResetResult;
 import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
 import com.mgmt.module.user.entity.SysUser;
@@ -23,11 +26,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +45,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final DataScopeService dataScopeService;
     private final PasswordPolicyService passwordPolicyService;
+    private final AuthService authService;
+    private final SecureRandom random = new SecureRandom();
 
     public PageResult<UserVO> page(long page, long size, String keyword) {
         LambdaQueryWrapper<SysUser> wrapper = searchWrapper(keyword);
@@ -103,6 +110,7 @@ public class UserService {
         passwordPolicyService.validate(req.getPassword());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setPasswordUpdateTime(LocalDateTime.now());
+        user.setMustChangePassword(0);
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
         user.setRoleId(requireRole(req.getRole()).getId());
@@ -135,6 +143,7 @@ public class UserService {
             passwordPolicyService.validate(req.getPassword());
             user.setPassword(passwordEncoder.encode(req.getPassword()));
             user.setPasswordUpdateTime(LocalDateTime.now());
+            user.setMustChangePassword(0);
         }
         if (req.getEmail() != null) {
             user.setEmail(req.getEmail());
@@ -166,6 +175,98 @@ public class UserService {
         requireUser(id);
         // @TableLogic 生效：这里执行的是 UPDATE ... SET deleted = 1
         userMapper.deleteById(id);
+    }
+
+    /**
+     * 批量启用/禁用：逐个校验数据范围，避免拿越权 ID 改到别人。
+     */
+    @Transactional
+    public int batchStatus(List<Long> ids, Integer status) {
+        if (status == null || (status != 0 && status != 1)) {
+            throw new BizException(400, I18n.get("user.batchStatusInvalid"));
+        }
+        List<SysUser> users = requireBatchUsers(ids);
+        if (status == 0 && users.stream().anyMatch(user -> Objects.equals(user.getId(), UserContext.getUserId()))) {
+            throw new BizException(400, I18n.get("user.cannotDisableSelf"));
+        }
+        userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .in(SysUser::getId, users.stream().map(SysUser::getId).toList())
+                .set(SysUser::getStatus, status));
+        return users.size();
+    }
+
+    @Transactional
+    public int batchRole(List<Long> ids, String role) {
+        SysRole target = requireRole(role);
+        List<SysUser> users = requireBatchUsers(ids);
+        userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .in(SysUser::getId, users.stream().map(SysUser::getId).toList())
+                .set(SysUser::getRoleId, target.getId()));
+        return users.size();
+    }
+
+    /**
+     * 批量重置密码：生成满足当前密码策略的临时密码，强制下次登录改密，
+     * 并让旧会话失效，避免旧密码签发的 token 继续可用。
+     */
+    @Transactional
+    public List<UserResetResult> batchResetPassword(List<Long> ids) {
+        List<SysUser> users = requireBatchUsers(ids);
+        if (users.stream().anyMatch(user -> Objects.equals(user.getId(), UserContext.getUserId()))) {
+            throw new BizException(400, I18n.get("user.cannotResetSelf"));
+        }
+        int minLength = passwordPolicyService.policy().minLength();
+        List<UserResetResult> results = new ArrayList<>();
+        for (SysUser user : users) {
+            String raw = randomPassword(minLength);
+            user.setPassword(passwordEncoder.encode(raw));
+            user.setPasswordUpdateTime(LocalDateTime.now());
+            user.setMustChangePassword(1);
+            userMapper.updateById(user);
+            authService.invalidateAllSessions(user.getId());
+            results.add(new UserResetResult(user.getUsername(), user.getRealName(), raw));
+        }
+        return results;
+    }
+
+    private List<SysUser> requireBatchUsers(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BizException(400, I18n.get("user.batchEmpty"));
+        }
+        List<Long> distinctIds = new ArrayList<>(new LinkedHashSet<>(ids));
+        List<SysUser> users = userMapper.selectBatchIds(distinctIds);
+        if (users.size() != distinctIds.size()) {
+            throw new BizException(404, I18n.get("user.notFound"));
+        }
+        DataScopeService.DataScope scope = dataScopeService.current();
+        for (SysUser user : users) {
+            if (!scope.canSeeUser(user.getId(), user.getDeptId())) {
+                throw new BizException(403, I18n.get("user.forbidden"));
+            }
+        }
+        return users;
+    }
+
+    private String randomPassword(int minLength) {
+        int length = Math.max(12, minLength);
+        String letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+        String digits = "23456789";
+        String all = letters + digits;
+        StringBuilder sb = new StringBuilder(length);
+        // 先放一个字母和一个数字，保证满足字母+数字的复杂度要求
+        sb.append(letters.charAt(random.nextInt(letters.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
+        while (sb.length() < length) {
+            sb.append(all.charAt(random.nextInt(all.length())));
+        }
+        char[] chars = sb.toString().toCharArray();
+        for (int i = chars.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = chars[i];
+            chars[i] = chars[j];
+            chars[j] = tmp;
+        }
+        return new String(chars);
     }
 
     private SysUser requireUser(Long id) {

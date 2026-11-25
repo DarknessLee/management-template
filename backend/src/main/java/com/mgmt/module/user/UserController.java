@@ -2,8 +2,12 @@ package com.mgmt.module.user;
 
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
+import com.mgmt.module.user.dto.UserBatchResetRequest;
+import com.mgmt.module.user.dto.UserBatchRoleRequest;
+import com.mgmt.module.user.dto.UserBatchStatusRequest;
 import com.mgmt.module.user.dto.UserCreateRequest;
 import com.mgmt.module.user.dto.UserImportResult;
+import com.mgmt.module.user.dto.UserResetResult;
 import com.mgmt.module.user.dto.UserUpdateRequest;
 import com.mgmt.module.user.dto.UserVO;
 import com.mgmt.security.OperationLog;
@@ -27,6 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -103,5 +108,29 @@ public class UserController {
     public Result<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return Result.ok();
+    }
+
+    @Operation(summary = "批量启用/禁用用户")
+    @PutMapping("/batch/status")
+    @RequirePermission("users:edit")
+    @OperationLog(module = "用户管理", action = "批量修改状态")
+    public Result<Integer> batchStatus(@Valid @RequestBody UserBatchStatusRequest request) {
+        return Result.ok(userService.batchStatus(request.getIds(), request.getStatus()));
+    }
+
+    @Operation(summary = "批量分配角色")
+    @PutMapping("/batch/role")
+    @RequirePermission("users:edit")
+    @OperationLog(module = "用户管理", action = "批量分配角色")
+    public Result<Integer> batchRole(@Valid @RequestBody UserBatchRoleRequest request) {
+        return Result.ok(userService.batchRole(request.getIds(), request.getRole()));
+    }
+
+    @Operation(summary = "批量重置密码")
+    @PostMapping("/batch/reset-password")
+    @RequirePermission("users:edit")
+    @OperationLog(module = "用户管理", action = "批量重置密码")
+    public Result<List<UserResetResult>> batchResetPassword(@Valid @RequestBody UserBatchResetRequest request) {
+        return Result.ok(userService.batchResetPassword(request.getIds()));
     }
 }

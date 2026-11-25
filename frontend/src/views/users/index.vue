@@ -25,7 +25,18 @@
         <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
 
-      <el-table :data="userList" border stripe>
+      <div v-if="canEdit" class="batch-bar">
+        <span class="batch-count">{{ t('users.selectedCount', { count: selectedIds.length }) }}</span>
+        <el-button size="small" :disabled="!selectedIds.length" @click="batchStatus(1)">{{ t('users.batchEnable') }}</el-button>
+        <el-button size="small" :disabled="!selectedIds.length" @click="batchStatus(0)">{{ t('users.batchDisable') }}</el-button>
+        <el-button size="small" :disabled="!selectedIds.length" @click="openBatchRoleDialog">{{ t('users.batchRole') }}</el-button>
+        <el-button size="small" type="danger" plain :disabled="!selectedIds.length" @click="batchResetPassword">
+          {{ t('users.batchReset') }}
+        </el-button>
+      </div>
+
+      <el-table ref="userTableRef" :data="userList" border stripe @selection-change="handleSelectionChange">
+        <el-table-column v-if="canEdit" type="selection" width="48" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" :label="t('users.columns.username')" />
         <el-table-column prop="realName" :label="t('users.columns.realName')" />
@@ -186,6 +197,41 @@
         <el-button type="primary" @click="saveUser">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="batchRoleDialogVisible" :title="t('users.batchRole')" width="420px">
+      <el-form label-width="80px">
+        <el-form-item :label="t('users.form.role')">
+          <el-select v-model="batchRole" :placeholder="t('users.rolePlaceholder')" style="width: 100%;">
+            <el-option v-for="role in roleOptions" :key="role.value" :label="role.label" :value="role.value" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchRoleDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="batchSubmitting" @click="submitBatchRole">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="resetDialogVisible" :title="t('users.batchResetTitle')" width="600px">
+      <el-alert :title="t('users.batchResetTip')" type="warning" :closable="false" show-icon />
+      <el-table :data="resetResults" border size="small" class="reset-table">
+        <el-table-column prop="username" :label="t('users.columns.username')" />
+        <el-table-column prop="realName" :label="t('users.columns.realName')" />
+        <el-table-column :label="t('users.password')" min-width="180">
+          <template #default="scope">
+            <span class="temp-password">{{ scope.row.password }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('users.columns.operation')" width="90">
+          <template #default="scope">
+            <el-button link type="primary" @click="copyPassword(scope.row.password)">{{ t('users.copy') }}</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button type="primary" @click="resetDialogVisible = false">{{ t('common.close') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -193,7 +239,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi, importUsersApi, exportUsersApi, downloadUserTemplateApi } from '@/api/user'
+import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, kickoutUserApi, importUsersApi, exportUsersApi, downloadUserTemplateApi, batchUpdateUserStatusApi, batchUpdateUserRoleApi, batchResetUserPasswordApi } from '@/api/user'
 import { getRolesApi } from '@/api/role'
 import { getDeptOptionsApi } from '@/api/dept'
 import { useI18n } from 'vue-i18n'
@@ -222,6 +268,13 @@ const canEdit = computed(() => userStore.permissions.includes('users:edit'))
 const canOperate = computed(() => canEdit.value || userStore.permissions.includes('users:delete'))
 
 const userList = ref([])
+const userTableRef = ref(null)
+const selectedIds = ref([])
+const batchRoleDialogVisible = ref(false)
+const batchRole = ref('')
+const batchSubmitting = ref(false)
+const resetDialogVisible = ref(false)
+const resetResults = ref([])
 const searchKeyword = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
@@ -474,6 +527,86 @@ function getRoleName(role) {
   return option ? option.label : role
 }
 
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map(row => row.id)
+}
+
+async function batchStatus(status) {
+  const action = status === 1 ? t('users.batchEnable') : t('users.batchDisable')
+  try {
+    await ElMessageBox.confirm(
+      t('users.batchStatusConfirm', { action, count: selectedIds.value.length }),
+      t('common.confirmTitle'),
+      { type: 'warning' }
+    )
+  } catch (error) {
+    return
+  }
+  try {
+    const res = await batchUpdateUserStatusApi({ ids: selectedIds.value, status })
+    ElMessage.success(t('users.batchDone', { count: res.data }))
+    userTableRef.value?.clearSelection()
+    loadUsers()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function openBatchRoleDialog() {
+  batchRole.value = ''
+  batchRoleDialogVisible.value = true
+}
+
+async function submitBatchRole() {
+  if (!batchRole.value) {
+    ElMessage.warning(t('users.batchRoleRequired'))
+    return
+  }
+  batchSubmitting.value = true
+  try {
+    const res = await batchUpdateUserRoleApi({ ids: selectedIds.value, role: batchRole.value })
+    ElMessage.success(t('users.batchDone', { count: res.data }))
+    batchRoleDialogVisible.value = false
+    userTableRef.value?.clearSelection()
+    loadUsers()
+  } catch (error) {
+    // 拦截器已提示
+  } finally {
+    batchSubmitting.value = false
+  }
+}
+
+async function batchResetPassword() {
+  try {
+    await ElMessageBox.confirm(
+      t('users.batchResetConfirm', { count: selectedIds.value.length }),
+      t('common.confirmTitle'),
+      { type: 'warning' }
+    )
+  } catch (error) {
+    return
+  }
+  try {
+    const res = await batchResetUserPasswordApi({ ids: selectedIds.value })
+    resetResults.value = res.data
+    resetDialogVisible.value = true
+    ElMessage.success(t('users.batchResetDone', { count: res.data.length }))
+    userTableRef.value?.clearSelection()
+    loadUsers()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+async function copyPassword(password) {
+  try {
+    await navigator.clipboard.writeText(password)
+    ElMessage.success(t('users.copied'))
+  } catch (error) {
+    ElMessage.warning(t('users.copyFailed'))
+  }
+}
+
 function getRoleType(role) {
   const typeMap = {
     admin: 'danger',
@@ -593,5 +726,30 @@ function saveBlob(response, fallbackName) {
 
 .error-table {
   margin-top: 12px;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--app-bg-page, #f5f7fa);
+}
+
+.batch-count {
+  margin-right: 4px;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.reset-table {
+  margin-top: 12px;
+}
+
+.temp-password {
+  font-family: Consolas, Monaco, monospace;
+  letter-spacing: 0.5px;
 }
 </style>

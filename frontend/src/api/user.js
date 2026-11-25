@@ -106,3 +106,27 @@ export function kickoutUserApi(id) {
     method: 'post'
   })
 }
+
+export function batchUpdateUserStatusApi(data) {
+  return request({
+    url: '/users/batch/status',
+    method: 'put',
+    data
+  })
+}
+
+export function batchUpdateUserRoleApi(data) {
+  return request({
+    url: '/users/batch/role',
+    method: 'put',
+    data
+  })
+}
+
+export function batchResetUserPasswordApi(data) {
+  return request({
+    url: '/users/batch/reset-password',
+    method: 'post',
+    data
+  })
+}

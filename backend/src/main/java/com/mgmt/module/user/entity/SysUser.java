@@ -29,6 +29,9 @@ public class SysUser {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime passwordUpdateTime;
 
+    /** 1 表示下次登录必须先修改密码（如管理员批量重置临时密码） */
+    private Integer mustChangePassword;
+
     private String realName;
 
     private String email;

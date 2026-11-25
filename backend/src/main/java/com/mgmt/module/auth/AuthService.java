@@ -205,7 +205,8 @@ public class AuthService {
         vo.setRole(role == null ? "" : role.getCode());
         vo.setPermissions(permissionService.permissionsOf(user.getId()));
         vo.setAvatar(user.getAvatar() == null ? "" : user.getAvatar());
-        vo.setMustChangePassword(passwordPolicyService.isExpired(user.getPasswordUpdateTime()));
+        vo.setMustChangePassword(Integer.valueOf(1).equals(user.getMustChangePassword())
+                || passwordPolicyService.isExpired(user.getPasswordUpdateTime()));
         return vo;
     }
 
