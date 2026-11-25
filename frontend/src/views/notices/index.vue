@@ -58,8 +58,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" :label="t('notices.columns.createTime')" width="180" />
-        <el-table-column :label="t('notices.columns.operation')" width="360" fixed="right">
+        <el-table-column :label="t('notices.columns.operation')" width="400" fixed="right">
           <template #default="scope">
+            <el-button size="small" @click="openPreview(scope.row)">{{ t('notices.view') }}</el-button>
             <el-button v-if="canEdit" size="small" @click="openEditDialog(scope.row)">{{ t('notices.edit') }}</el-button>
             <el-button v-if="canEdit" size="small" @click="togglePin(scope.row)">
               {{ scope.row.pinned === 1 ? t('notices.unpin') : t('notices.pinned') }}
@@ -94,19 +95,14 @@
     <el-dialog
       :title="dialogTitle"
       v-model="dialogVisible"
-      width="600px"
+      width="760px"
     >
       <el-form ref="noticeFormRef" :model="noticeForm" :rules="formRules" label-width="90px">
         <el-form-item :label="t('notices.form.title')" prop="title">
           <el-input v-model="noticeForm.title" maxlength="100" show-word-limit :placeholder="t('notices.titlePlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('notices.form.content')" prop="content">
-          <el-input
-            v-model="noticeForm.content"
-            type="textarea"
-            :rows="8"
-            :placeholder="t('notices.contentPlaceholder')"
-          />
+          <RichTextEditor v-model="noticeForm.content" :placeholder="t('notices.contentPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('notices.form.pinned')">
           <el-switch v-model="noticeForm.pinned" :active-value="1" :inactive-value="0" />
@@ -116,6 +112,11 @@
         <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="saveNotice">{{ t('common.confirm') }}</el-button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="previewVisible" :title="previewNotice.title" width="640px">
+      <p class="preview-meta">{{ previewNotice.publishTime || previewNotice.createTime }}</p>
+      <div class="notice-html" v-html="previewNotice.content"></div>
     </el-dialog>
 
     <el-drawer
@@ -162,6 +163,7 @@ import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
 import { useI18n } from 'vue-i18n'
 import { useDictOptions, dictLabel } from '@/utils/dict'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const icons = { Plus }
 
@@ -216,6 +218,9 @@ const formRules = computed(() => ({
   title: [{ required: true, message: t('notices.titleRequired'), trigger: 'blur' }],
   content: [{ required: true, message: t('notices.contentRequired'), trigger: 'blur' }]
 }))
+
+const previewVisible = ref(false)
+const previewNotice = ref({})
 
 const readVisible = ref(false)
 const readLoading = ref(false)
@@ -344,6 +349,11 @@ async function togglePin(row) {
   }
 }
 
+function openPreview(row) {
+  previewNotice.value = row
+  previewVisible.value = true
+}
+
 function openReadDrawer(row) {
   readNotice.value = row
   readPage.value = 1
@@ -426,6 +436,35 @@ async function deleteNotice(row) {
 .read-pager {
   margin-top: 12px;
   text-align: right;
+}
+
+.preview-meta {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--app-text-placeholder);
+}
+
+.notice-html {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--app-text-regular);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.notice-html :deep(img) {
+  max-width: 100%;
+}
+
+.notice-html :deep(a) {
+  color: #409eff;
+}
+
+.notice-html :deep(blockquote) {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--app-border);
+  color: var(--app-text-secondary);
 }
 
 .status-select {

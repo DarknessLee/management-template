@@ -42,6 +42,17 @@ public class NoticeController {
         return Result.ok(noticeService.page(page, size, keyword, status));
     }
 
+    /**
+     * 公告中心对所有登录用户开放，只返回已发布公告。
+     */
+    @Operation(summary = "公告中心：分页查询已发布公告")
+    @GetMapping("/center")
+    public Result<PageResult<SysNotice>> center(@RequestParam(defaultValue = "1") long page,
+                                                @RequestParam(defaultValue = "10") long size,
+                                                @RequestParam(required = false) String keyword) {
+        return Result.ok(noticeService.centerPage(page, size, keyword, UserContext.getUserId()));
+    }
+
     @Operation(summary = "新增公告")
     @PostMapping
     @RequirePermission("notice:edit")
@@ -102,6 +113,12 @@ public class NoticeController {
     @GetMapping("/unread")
     public Result<List<SysNotice>> unread() {
         return Result.ok(noticeService.unread(UserContext.getUserId()));
+    }
+
+    @Operation(summary = "当前用户未读公告数")
+    @GetMapping("/unread-count")
+    public Result<Long> unreadCount() {
+        return Result.ok(noticeService.unreadCount(UserContext.getUserId()));
     }
 
     @PostMapping("/{id}/read")

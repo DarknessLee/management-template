@@ -247,7 +247,7 @@
 
     <el-dialog v-model="noticeVisible" :title="currentNotice.title" width="560px">
       <p class="notice-dialog-meta">{{ currentNotice.publishTime }}</p>
-      <div class="notice-content">{{ currentNotice.content }}</div>
+      <div class="notice-content" v-html="currentNotice.content"></div>
     </el-dialog>
   </div>
 </template>
@@ -877,6 +877,21 @@ async function loadDashboard() {
   line-height: 1.8;
   color: var(--app-text-regular);
   white-space: pre-wrap;
+}
+
+.notice-content :deep(img) {
+  max-width: 100%;
+}
+
+.notice-content :deep(a) {
+  color: #409eff;
+}
+
+.notice-content :deep(blockquote) {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--app-border);
+  color: var(--app-text-secondary);
 }
 
 @media (max-width: 1280px) {

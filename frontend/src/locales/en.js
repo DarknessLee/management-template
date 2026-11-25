@@ -538,6 +538,7 @@ export default {
     statusPublished: 'Published',
     statusOffline: 'Unpublished',
     edit: 'Edit',
+    view: 'View',
     reads: 'Reads',
     publish: 'Publish',
     offline: 'Unpublish',
@@ -551,6 +552,22 @@ export default {
     contentPlaceholder: 'Enter notice content',
     titleRequired: 'Please enter notice title',
     contentRequired: 'Please enter notice content',
+    editor: {
+      bold: 'Bold',
+      italic: 'Italic',
+      underline: 'Underline',
+      strike: 'Strikethrough',
+      heading: 'Heading',
+      quote: 'Quote',
+      unorderedList: 'Bullet list',
+      orderedList: 'Numbered list',
+      link: 'Insert link',
+      linkPrompt: 'Enter a link URL (http/https or mailto)',
+      image: 'Insert image',
+      imagePrompt: 'Enter an image URL (http/https)',
+      clear: 'Clear formatting',
+      urlInvalid: 'Invalid URL format'
+    },
     publishConfirm: 'Publish notice "{name}"?',
     offlineConfirm: 'Unpublish notice "{name}"?',
     publishSuccess: 'Published',
@@ -566,6 +583,20 @@ export default {
       readTime: 'Read At'
     },
     deleteConfirm: 'Delete notice "{name}"?'
+  },
+  noticeCenter: {
+    title: 'Notice Center',
+    searchPlaceholder: 'Search notice title',
+    unreadCount: '{count} unread',
+    read: 'Read',
+    unread: 'Unread',
+    pinned: 'Pinned',
+    columns: {
+      title: 'Title',
+      publishTime: 'Published At',
+      status: 'Status',
+      operation: 'Actions'
+    }
   },
   messages: {
     title: 'Message Center',

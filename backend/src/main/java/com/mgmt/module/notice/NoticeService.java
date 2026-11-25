@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
+import com.mgmt.common.HtmlSanitizer;
 import com.mgmt.common.PageResult;
 import com.mgmt.module.message.MessageService;
 import com.mgmt.module.notice.dto.NoticeReadStatsVO;
@@ -58,11 +59,42 @@ public class NoticeService {
         return PageResult.of(result, result.getRecords());
     }
 
+    /**
+     * 公告中心：所有登录用户只看已发布公告，并标记当前用户的已读状态。
+     */
+    public PageResult<SysNotice> centerPage(long page, long size, String keyword, Long userId) {
+        IPage<SysNotice> result = noticeMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<SysNotice>()
+                        .eq(SysNotice::getStatus, STATUS_PUBLISHED)
+                        .like(StringUtils.hasText(keyword), SysNotice::getTitle, keyword)
+                        .orderByDesc(SysNotice::getPinned)
+                        .orderByDesc(SysNotice::getPublishTime)
+                        .orderByDesc(SysNotice::getId));
+        attachReadFlag(result.getRecords(), userId);
+        return PageResult.of(result, result.getRecords());
+    }
+
+    /**
+     * 列表页一次性补齐当前用户的已读状态，避免逐条查询。
+     */
+    private void attachReadFlag(List<SysNotice> notices, Long userId) {
+        if (notices.isEmpty()) {
+            return;
+        }
+        Set<Long> readIds = readMapper.selectList(new LambdaQueryWrapper<SysNoticeRead>()
+                        .eq(SysNoticeRead::getUserId, userId)
+                        .in(SysNoticeRead::getNoticeId, notices.stream().map(SysNotice::getId).toList()))
+                .stream()
+                .map(SysNoticeRead::getNoticeId)
+                .collect(Collectors.toSet());
+        notices.forEach(notice -> notice.setReadFlag(readIds.contains(notice.getId()) ? 1 : 0));
+    }
+
     public SysNotice create(NoticeRequest request) {
         validate(request);
         SysNotice notice = new SysNotice();
         notice.setTitle(request.getTitle().trim());
-        notice.setContent(request.getContent().trim());
+        notice.setContent(sanitizeContent(request.getContent()));
         notice.setPinned(normalizePinned(request.getPinned()));
         // 新建先保持下线状态，由管理员确认后再发布
         notice.setStatus(STATUS_OFFLINE);
@@ -74,7 +106,7 @@ public class NoticeService {
         SysNotice notice = requireNotice(id);
         validate(request);
         notice.setTitle(request.getTitle().trim());
-        notice.setContent(request.getContent().trim());
+        notice.setContent(sanitizeContent(request.getContent()));
         notice.setPinned(normalizePinned(request.getPinned()));
         noticeMapper.updateById(notice);
         return notice;
@@ -110,7 +142,7 @@ public class NoticeService {
         if (status == STATUS_PUBLISHED) {
             messageService.sendToAllEnabled(MessageService.TYPE_NOTICE,
                     I18n.get("message.noticeTitle", notice.getTitle()),
-                    notice.getContent(),
+                    HtmlSanitizer.plainText(notice.getContent()),
                     null);
         }
         return notice;
@@ -147,6 +179,25 @@ public class NoticeService {
                 .filter(notice -> !readIds.contains(notice.getId()))
                 .limit(20)
                 .toList();
+    }
+
+    /**
+     * 当前用户未读的已发布公告数量，公告中心顶部展示用。
+     */
+    public long unreadCount(Long userId) {
+        List<Long> publishedIds = noticeMapper.selectList(new LambdaQueryWrapper<SysNotice>()
+                        .eq(SysNotice::getStatus, STATUS_PUBLISHED)
+                        .select(SysNotice::getId))
+                .stream()
+                .map(SysNotice::getId)
+                .toList();
+        if (publishedIds.isEmpty()) {
+            return 0;
+        }
+        long readCount = readMapper.selectCount(new LambdaQueryWrapper<SysNoticeRead>()
+                .eq(SysNoticeRead::getUserId, userId)
+                .in(SysNoticeRead::getNoticeId, publishedIds));
+        return Math.max(0, publishedIds.size() - readCount);
     }
 
     public void markRead(Long noticeId, Long userId) {
@@ -226,6 +277,20 @@ public class NoticeService {
 
     private Integer normalizePinned(Integer pinned) {
         return pinned != null && pinned == PINNED ? PINNED : UNPINNED;
+    }
+
+    /**
+     * 公告正文存富文本，入口统一做白名单过滤，避免脚本被带到所有用户的阅读弹窗。
+     */
+    private String sanitizeContent(String raw) {
+        String clean = HtmlSanitizer.clean(raw.trim());
+        if (!StringUtils.hasText(clean)) {
+            throw new BizException(I18n.get("notice.contentRequired"));
+        }
+        if (clean.length() > 20000) {
+            throw new BizException(I18n.get("notice.contentTooLong"));
+        }
+        return clean;
     }
 
     private void validate(NoticeRequest request) {

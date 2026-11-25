@@ -538,6 +538,7 @@ export default {
     statusPublished: '已发布',
     statusOffline: '已下线',
     edit: '编辑',
+    view: '查看',
     reads: '已读',
     publish: '发布',
     offline: '下线',
@@ -551,6 +552,22 @@ export default {
     contentPlaceholder: '请输入公告内容',
     titleRequired: '请输入公告标题',
     contentRequired: '请输入公告内容',
+    editor: {
+      bold: '加粗',
+      italic: '斜体',
+      underline: '下划线',
+      strike: '删除线',
+      heading: '小标题',
+      quote: '引用',
+      unorderedList: '无序列表',
+      orderedList: '有序列表',
+      link: '插入链接',
+      linkPrompt: '请输入链接地址（http/https 或 mailto）',
+      image: '插入图片',
+      imagePrompt: '请输入图片地址（http/https）',
+      clear: '清除格式',
+      urlInvalid: '链接格式不正确'
+    },
     publishConfirm: '确定要发布公告「{name}」吗？',
     offlineConfirm: '确定要下线公告「{name}」吗？',
     publishSuccess: '发布成功',
@@ -566,6 +583,20 @@ export default {
       readTime: '已读时间'
     },
     deleteConfirm: '确定要删除公告「{name}」吗？'
+  },
+  noticeCenter: {
+    title: '公告中心',
+    searchPlaceholder: '搜索公告标题',
+    unreadCount: '{count} 条未读',
+    read: '已读',
+    unread: '未读',
+    pinned: '置顶',
+    columns: {
+      title: '标题',
+      publishTime: '发布时间',
+      status: '状态',
+      operation: '操作'
+    }
   },
   messages: {
     title: '消息中心',

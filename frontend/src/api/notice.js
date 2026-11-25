@@ -8,6 +8,21 @@ export function getNoticesApi(params) {
   })
 }
 
+export function getNoticeCenterApi(params) {
+  return request({
+    url: '/notices/center',
+    method: 'get',
+    params
+  })
+}
+
+export function getNoticeUnreadCountApi() {
+  return request({
+    url: '/notices/unread-count',
+    method: 'get'
+  })
+}
+
 export function createNoticeApi(data) {
   return request({
     url: '/notices',

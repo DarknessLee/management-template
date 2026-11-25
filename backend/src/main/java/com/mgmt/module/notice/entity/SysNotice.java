@@ -33,6 +33,10 @@ public class SysNotice {
     @TableField(exist = false)
     private Long readCount;
 
+    /** 当前登录用户是否已读：1已读 0未读，公告中心列表用 */
+    @TableField(exist = false)
+    private Integer readFlag;
+
     /** 最近一次发布时间，下线后保留，便于追溯 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishTime;
