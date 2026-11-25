@@ -719,6 +719,13 @@ export default {
     cleanNoDate: '请选择清理截止日期',
     cleanSuccess: '已清理 {count} 条日志',
     modulePlaceholder: '全部模块',
+    stats: {
+      todayTotal: '今日操作',
+      todayFailed: '今日失败',
+      failureRate: '失败率',
+      slowModules: '最慢模块 Top3',
+      noData: '今日暂无操作记录'
+    },
     moduleUsers: '用户管理',
     moduleRoles: '角色管理',
     moduleSettings: '系统设置',

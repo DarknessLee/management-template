@@ -719,6 +719,13 @@ export default {
     cleanNoDate: 'Please select a cutoff date',
     cleanSuccess: '{count} logs cleaned',
     modulePlaceholder: 'All modules',
+    stats: {
+      todayTotal: 'Operations Today',
+      todayFailed: 'Failed Today',
+      failureRate: 'Failure Rate',
+      slowModules: 'Slowest Modules',
+      noData: 'No operations today'
+    },
     moduleUsers: 'User Management',
     moduleRoles: 'Role Management',
     moduleSettings: 'System Settings',

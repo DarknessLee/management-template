@@ -8,6 +8,13 @@ export function getLogsApi(params) {
   })
 }
 
+export function getLogStatsApi() {
+  return request({
+    url: '/logs/stats',
+    method: 'get'
+  })
+}
+
 export function exportLogsApi(params) {
   return request({
     url: '/logs/export',

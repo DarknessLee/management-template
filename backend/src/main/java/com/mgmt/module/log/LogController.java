@@ -4,6 +4,7 @@ import com.mgmt.common.I18n;
 import com.mgmt.common.BizException;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
+import com.mgmt.module.log.dto.OperationLogStatsVO;
 import com.mgmt.module.log.entity.SysOperationLog;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
@@ -76,5 +77,11 @@ public class LogController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         return Result.ok(logService.page(page, size, module, keyword, startTime, endTime));
+    }
+
+    @GetMapping("/stats")
+    @RequirePermission("logs:view")
+    public Result<OperationLogStatsVO> stats() {
+        return Result.ok(logService.stats());
     }
 }

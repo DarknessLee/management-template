@@ -7,6 +7,32 @@
       <el-button v-permission="'logs:clean'" type="danger" plain @click="openCleanDialog">{{ t('logs.clean') }}</el-button>
     </div>
 
+    <div class="stat-grid">
+      <div class="stat-card">
+        <p class="stat-label">{{ t('logs.stats.todayTotal') }}</p>
+        <p class="stat-value">{{ stats.todayTotal }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('logs.stats.todayFailed') }}</p>
+        <p class="stat-value is-danger">{{ stats.todayFailed }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('logs.stats.failureRate') }}</p>
+        <p class="stat-value">{{ stats.failureRate }}%</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('logs.stats.slowModules') }}</p>
+        <ul v-if="stats.slowModules.length" class="slow-list">
+          <li v-for="(item, index) in stats.slowModules" :key="item.module">
+            <span class="slow-rank">{{ index + 1 }}</span>
+            <span class="slow-name">{{ item.module }}</span>
+            <span class="slow-value">{{ item.avgDurationMs }} ms</span>
+          </li>
+        </ul>
+        <p v-else class="slow-empty">{{ t('logs.stats.noData') }}</p>
+      </div>
+    </div>
+
     <el-dialog :title="t('logs.cleanTitle')" v-model="cleanDialogVisible" width="460px">
       <el-form label-width="90px">
         <el-form-item :label="t('logs.cleanDate')">
@@ -110,7 +136,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getLogsApi, exportLogsApi, cleanLogsApi } from '@/api/log'
+import { getLogsApi, getLogStatsApi, exportLogsApi, cleanLogsApi } from '@/api/log'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -123,6 +149,13 @@ const moduleOptions = computed(() => [
 ])
 
 const logList = ref([])
+const stats = ref({
+  todayTotal: 0,
+  todaySuccess: 0,
+  todayFailed: 0,
+  failureRate: 0,
+  slowModules: []
+})
 const timeRange = ref([])
 const pagination = reactive({
   page: 1,
@@ -136,7 +169,17 @@ const searchForm = reactive({
 
 onMounted(() => {
   loadLogs()
+  loadStats()
 })
+
+async function loadStats() {
+  try {
+    const res = await getLogStatsApi()
+    stats.value = res.data
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
 
 async function loadLogs() {
   try {
@@ -302,5 +345,81 @@ function saveBlob(response, fallbackName) {
 
 .error-text {
   color: #f56c6c;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--app-bg-container);
+  border: 1px solid var(--app-border);
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.stat-value {
+  margin: 10px 0 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.stat-value.is-danger {
+  color: #f56c6c;
+}
+
+.slow-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slow-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--app-text-primary);
+}
+
+.slow-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  color: #fff;
+  background: #e6a23c;
+}
+
+.slow-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slow-value {
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.slow-empty {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
 }
 </style>

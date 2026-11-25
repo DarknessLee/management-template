@@ -1,9 +1,11 @@
 package com.mgmt.module.log;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.log.dto.OperationLogStatsVO;
 import com.mgmt.module.log.entity.SysOperationLog;
 import com.mgmt.module.log.mapper.SysOperationLogMapper;
 import com.mgmt.module.role.DataScopeService;
@@ -13,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -71,6 +74,70 @@ public class OperationLogService {
                                                LocalDateTime startTime, LocalDateTime endTime) {
         return logMapper.selectList(searchWrapper(module, keyword, startTime, endTime)
                 .orderByDesc(SysOperationLog::getId));
+    }
+
+    /**
+     * 今日操作统计：操作总数、成功/失败次数、失败率以及平均耗时最长的模块 Top3。
+     */
+    public OperationLogStatsVO stats() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        OperationLogStatsVO vo = new OperationLogStatsVO();
+        vo.setTodaySuccess(countWithScope(1, start, end));
+        vo.setTodayFailed(countWithScope(0, start, end));
+        vo.setTodayTotal(vo.getTodaySuccess() + vo.getTodayFailed());
+        if (vo.getTodayTotal() > 0) {
+            double rate = vo.getTodayFailed() * 100.0 / vo.getTodayTotal();
+            vo.setFailureRate(Math.round(rate * 10) / 10.0);
+        }
+
+        QueryWrapper<SysOperationLog> wrapper = rangeWrapper(start, end);
+        if (wrapper != null) {
+            wrapper.select("module", "AVG(duration_ms) AS avg_ms", "COUNT(*) AS cnt")
+                    .isNotNull("duration_ms")
+                    .groupBy("module")
+                    .orderByDesc("avg_ms")
+                    .last("LIMIT 3");
+            vo.setSlowModules(logMapper.selectMaps(wrapper).stream()
+                    .map(row -> {
+                        double avg = row.get("avg_ms") == null
+                                ? 0
+                                : ((Number) row.get("avg_ms")).doubleValue();
+                        return new OperationLogStatsVO.SlowModule(
+                                String.valueOf(row.get("module")),
+                                Math.round(avg * 10) / 10.0,
+                                ((Number) row.get("cnt")).longValue());
+                    })
+                    .toList());
+        }
+        return vo;
+    }
+
+    private long countWithScope(int success, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<SysOperationLog> wrapper = rangeWrapper(start, end);
+        if (wrapper == null) {
+            return 0;
+        }
+        wrapper.eq("success", success);
+        return logMapper.selectCount(wrapper);
+    }
+
+    /**
+     * 按时间范围构造查询并套用数据范围；返回 null 表示当前角色看不到任何数据。
+     */
+    private QueryWrapper<SysOperationLog> rangeWrapper(LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<SysOperationLog> wrapper = new QueryWrapper<>();
+        wrapper.ge("create_time", start).lt("create_time", end);
+        List<Long> visibleUserIds = dataScopeService.visibleUserIds();
+        if (visibleUserIds != null) {
+            if (visibleUserIds.isEmpty()) {
+                return null;
+            }
+            wrapper.in("user_id", visibleUserIds);
+        }
+        return wrapper;
     }
 
     private LambdaQueryWrapper<SysOperationLog> searchWrapper(String module, String keyword,
