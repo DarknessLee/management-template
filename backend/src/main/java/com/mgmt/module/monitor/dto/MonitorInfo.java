@@ -41,4 +41,41 @@ public class MonitorInfo {
     private String osArch;
 
     private String hostName;
+
+    /** Redis 是否可连接 */
+    private boolean redisAvailable;
+
+    private String redisVersion;
+
+    /** Redis 已用内存（字节） */
+    private long redisUsedMemory;
+
+    /** Redis 最大内存限制（字节），0 表示未限制 */
+    private long redisMaxMemory;
+
+    /** 当前库键总数 */
+    private long redisKeys;
+
+    /** 客户端连接数 */
+    private long redisClients;
+
+    /** 验证码缓存键数量 */
+    private long captchaKeys;
+
+    /** 登录失败计数键数量（清理后可解除临时锁定） */
+    private long loginFailKeys;
+
+    /** 数据库连接池是否可用 */
+    private boolean dbPoolAvailable;
+
+    private int dbPoolActive;
+
+    private int dbPoolIdle;
+
+    private int dbPoolTotal;
+
+    private int dbPoolMax;
+
+    /** 等待获取连接的线程数 */
+    private int dbPoolWaiting;
 }

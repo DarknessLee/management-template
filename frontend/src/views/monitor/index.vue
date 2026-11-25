@@ -37,13 +37,61 @@
         <el-descriptions-item :label="t('monitor.loadAverage')">{{ loadAverageText }}</el-descriptions-item>
       </el-descriptions>
     </div>
+
+    <div class="card runtime-card" v-loading="loading">
+      <div class="runtime-header">
+        <h3 class="runtime-title">{{ t('monitor.cacheTitle') }}</h3>
+        <el-button
+          v-permission="'monitor:cache'"
+          type="danger"
+          plain
+          size="small"
+          :loading="clearing"
+          @click="clearCache"
+        >
+          {{ t('monitor.clearCache') }}
+        </el-button>
+      </div>
+      <p class="runtime-tip">{{ t('monitor.clearCacheTip') }}</p>
+      <el-row :gutter="20">
+        <el-col :xs="24" :lg="12">
+          <el-descriptions :title="t('monitor.redisTitle')" :column="1" border>
+            <el-descriptions-item :label="t('monitor.redisStatus')">
+              <el-tag :type="info.redisAvailable ? 'success' : 'danger'" size="small">
+                {{ info.redisAvailable ? t('monitor.available') : t('monitor.unavailable') }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.redisVersion')">{{ info.redisVersion || '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.redisMemory')">{{ redisMemoryText }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.redisKeys')">{{ info.redisKeys }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.redisClients')">{{ info.redisClients }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.captchaKeys')">{{ info.captchaKeys }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.loginFailKeys')">{{ info.loginFailKeys }}</el-descriptions-item>
+          </el-descriptions>
+        </el-col>
+        <el-col :xs="24" :lg="12">
+          <el-descriptions :title="t('monitor.dbPoolTitle')" :column="1" border class="pool-block">
+            <el-descriptions-item :label="t('monitor.dbPoolStatus')">
+              <el-tag :type="info.dbPoolAvailable ? 'success' : 'danger'" size="small">
+                {{ info.dbPoolAvailable ? t('monitor.available') : t('monitor.unavailable') }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.dbPoolActive')">{{ info.dbPoolActive }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.dbPoolIdle')">{{ info.dbPoolIdle }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.dbPoolTotal')">{{ info.dbPoolTotal }} / {{ info.dbPoolMax }}</el-descriptions-item>
+            <el-descriptions-item :label="t('monitor.dbPoolWaiting')">{{ info.dbPoolWaiting }}</el-descriptions-item>
+          </el-descriptions>
+        </el-col>
+      </el-row>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { getMonitorApi } from '@/api/monitor'
+import { getMonitorApi, clearMonitorCacheApi } from '@/api/monitor'
 import { useSiteStore } from '@/stores/site'
 import { useI18n } from 'vue-i18n'
 
@@ -53,6 +101,7 @@ const siteStore = useSiteStore()
 const { t } = useI18n()
 
 const loading = ref(false)
+const clearing = ref(false)
 const info = ref({
   heapUsed: 0,
   heapMax: 0,
@@ -66,7 +115,21 @@ const info = ref({
   javaVersion: '',
   osName: '',
   osArch: '',
-  hostName: ''
+  hostName: '',
+  redisAvailable: false,
+  redisVersion: '',
+  redisUsedMemory: 0,
+  redisMaxMemory: 0,
+  redisKeys: 0,
+  redisClients: 0,
+  captchaKeys: 0,
+  loginFailKeys: 0,
+  dbPoolAvailable: false,
+  dbPoolActive: 0,
+  dbPoolIdle: 0,
+  dbPoolTotal: 0,
+  dbPoolMax: 0,
+  dbPoolWaiting: 0
 })
 
 const osText = computed(() => {
@@ -83,6 +146,14 @@ const loadAverageText = computed(() => {
 const heapPercent = computed(() => toPercent(info.value.heapUsed, info.value.heapMax))
 const diskUsed = computed(() => Math.max(info.value.diskTotal - info.value.diskFree, 0))
 const diskPercent = computed(() => toPercent(diskUsed.value, info.value.diskTotal))
+
+const redisMemoryText = computed(() => {
+  const used = formatBytes(info.value.redisUsedMemory)
+  if (info.value.redisMaxMemory > 0) {
+    return `${used} / ${formatBytes(info.value.redisMaxMemory)}`
+  }
+  return `${used}${t('monitor.noLimit')}`
+})
 
 const stats = computed(() => [
   {
@@ -128,6 +199,24 @@ async function loadInfo() {
     // 拦截器已提示
   } finally {
     loading.value = false
+  }
+}
+
+async function clearCache() {
+  try {
+    await ElMessageBox.confirm(t('monitor.clearCacheConfirm'), t('monitor.clearCache'), { type: 'warning' })
+  } catch {
+    return
+  }
+  clearing.value = true
+  try {
+    const res = await clearMonitorCacheApi('all')
+    ElMessage.success(t('monitor.cacheCleared', { count: res.data }))
+    await loadInfo()
+  } catch (error) {
+    // 拦截器已提示
+  } finally {
+    clearing.value = false
   }
 }
 
@@ -196,5 +285,35 @@ function formatUptime(milliseconds) {
 
 .info-block {
   margin-top: 8px;
+}
+
+.runtime-card {
+  margin-top: 20px;
+}
+
+.runtime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.runtime-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.runtime-tip {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+@media (max-width: 1199px) {
+  .pool-block {
+    margin-top: 20px;
+  }
 }
 </style>

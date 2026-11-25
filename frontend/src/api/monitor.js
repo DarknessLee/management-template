@@ -6,3 +6,11 @@ export function getMonitorApi() {
     method: 'get'
   })
 }
+
+export function clearMonitorCacheApi(type = 'all') {
+  return request({
+    url: '/monitor/cache/clear',
+    method: 'post',
+    params: { type }
+  })
+}

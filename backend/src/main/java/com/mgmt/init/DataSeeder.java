@@ -88,6 +88,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "dict:view");
         ensurePermission("admin", "dict:edit");
         ensurePermission("admin", "monitor:view");
+        ensurePermission("admin", "monitor:cache");
         ensurePermission("admin", "online:view");
         ensurePermission("admin", "logs:clean");
         ensurePermission("admin", "dept:view");
@@ -120,6 +121,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("dict:view", "查看字典", "数据字典");
         ensurePermissionDefinition("dict:edit", "管理字典", "数据字典");
         ensurePermissionDefinition("monitor:view", "查看监控", "系统监控");
+        ensurePermissionDefinition("monitor:cache", "清理缓存", "系统监控");
         ensurePermissionDefinition("online:view", "查看在线用户", "在线用户");
         ensurePermissionDefinition("dept:view", "查看部门", "部门管理");
         ensurePermissionDefinition("dept:edit", "维护部门", "部门管理");
