@@ -23,12 +23,26 @@ public class LoginLogService {
 
     public PageResult<LoginLog> page(long page, long size, String username,
                                      LocalDateTime startTime, LocalDateTime endTime) {
+        IPage<LoginLog> result = loginLogMapper.selectPage(new Page<>(page, size),
+                searchWrapper(username, startTime, endTime).orderByDesc(LoginLog::getLoginTime).orderByDesc(LoginLog::getId));
+        return PageResult.of(result, result.getRecords());
+    }
+
+    /**
+     * 导出与列表共用筛选条件和数据范围，避免导出越权数据。
+     */
+    public List<LoginLog> listForExport(String username, LocalDateTime startTime, LocalDateTime endTime) {
+        return loginLogMapper.selectList(searchWrapper(username, startTime, endTime)
+                .orderByDesc(LoginLog::getLoginTime)
+                .orderByDesc(LoginLog::getId));
+    }
+
+    private LambdaQueryWrapper<LoginLog> searchWrapper(String username,
+                                                       LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(username), LoginLog::getUsername, username)
                 .ge(startTime != null, LoginLog::getLoginTime, startTime)
-                .le(endTime != null, LoginLog::getLoginTime, endTime)
-                .orderByDesc(LoginLog::getLoginTime)
-                .orderByDesc(LoginLog::getId);
+                .le(endTime != null, LoginLog::getLoginTime, endTime);
 
         // 与操作日志一致，按当前用户角色的数据范围过滤
         List<Long> visibleUserIds = dataScopeService.visibleUserIds();
@@ -39,9 +53,7 @@ public class LoginLogService {
                 wrapper.in(LoginLog::getUserId, visibleUserIds);
             }
         }
-
-        IPage<LoginLog> result = loginLogMapper.selectPage(new Page<>(page, size), wrapper);
-        return PageResult.of(result, result.getRecords());
+        return wrapper;
     }
 
     /**

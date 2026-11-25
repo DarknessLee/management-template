@@ -7,3 +7,12 @@ export function getLoginLogsApi(params) {
     params
   })
 }
+
+export function exportLoginLogsApi(params) {
+  return request({
+    url: '/login-logs/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}

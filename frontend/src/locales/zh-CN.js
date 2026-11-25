@@ -685,6 +685,7 @@ export default {
   loginLogs: {
     title: '登录日志',
     tip: '记录登录与退出时间，未退出显示在线',
+    export: '导出',
     usernamePlaceholder: '登录名',
     startTime: '开始时间',
     endTime: '结束时间',

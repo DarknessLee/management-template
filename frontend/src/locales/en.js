@@ -685,6 +685,7 @@ export default {
   loginLogs: {
     title: 'Login Logs',
     tip: 'Records login and logout times; sessions without logout are shown as online',
+    export: 'Export',
     usernamePlaceholder: 'Username',
     startTime: 'Start time',
     endTime: 'End time',

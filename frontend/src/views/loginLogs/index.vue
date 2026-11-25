@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2 class="page-title">{{ t('loginLogs.title') }}</h2>
       <span class="page-tip">{{ t('loginLogs.tip') }}</span>
+      <el-button @click="exportLogs">{{ t('loginLogs.export') }}</el-button>
     </div>
 
     <div class="card">
@@ -67,7 +68,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getLoginLogsApi } from '@/api/loginLog'
+import { getLoginLogsApi, exportLoginLogsApi } from '@/api/loginLog'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -126,8 +127,32 @@ function handleCurrentChange(page) {
   loadLogs()
 }
 
-function formatDuration(row) {
-  if (!row.logoutTime) {
+async function exportLogs() {
+  try {
+    const response = await exportLoginLogsApi({
+      username: searchForm.username || undefined,
+      startTime: timeRange.value?.[0],
+      endTime: timeRange.value?.[1]
+    })
+    saveBlob(response, 'login-logs.xlsx')
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function saveBlob(response, fallbackName) {
+  const disposition = response.headers['content-disposition'] || ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  const filename = match ? decodeURIComponent(match[1]) : fallbackName
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function formatDuration(row) {  if (!row.logoutTime) {
     return '—'
   }
   // 兼容 "yyyy-MM-dd HH:mm:ss"，Safari 下需要把连字符换成斜杠
@@ -147,7 +172,12 @@ function formatDuration(row) {
 </script>
 
 <style scoped>
+.page-header {
+  justify-content: flex-start;
+}
+
 .page-tip {
+  margin-right: auto;
   font-size: 13px;
   color: var(--app-text-secondary);
 }
