@@ -3,13 +3,18 @@ package com.mgmt.module.message;
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
 import com.mgmt.common.UserContext;
+import com.mgmt.module.message.dto.MessageSendRequest;
 import com.mgmt.module.message.entity.SysMessage;
+import com.mgmt.security.OperationLog;
+import com.mgmt.security.RequirePermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +30,14 @@ import java.util.List;
 public class MessageController {
 
     private final MessageService messageService;
+
+    @Operation(summary = "管理员群发站内消息")
+    @PostMapping("/send")
+    @RequirePermission("message:send")
+    @OperationLog(module = "站内消息", action = "群发消息")
+    public Result<Integer> send(@Valid @RequestBody MessageSendRequest request) {
+        return Result.ok(messageService.send(request));
+    }
 
     @Operation(summary = "分页查询当前用户消息")
     @GetMapping

@@ -72,6 +72,7 @@ public class DataSeeder implements ApplicationRunner {
         migrateMenuGroups();
         ensureFileMenu();
         ensureMessageMenu();
+        ensureMessageSendMenu();
         ensureMenuEnglishTitles();
         seedDepts();
         seedJobs();
@@ -94,6 +95,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "menu:edit");
         ensurePermission("admin", "file:view");
         ensurePermission("admin", "file:edit");
+        ensurePermission("admin", "message:send");
         settingService.initDefaultsIfEmpty();
     }
 
@@ -124,6 +126,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("menu:edit", "维护菜单", "菜单管理");
         ensurePermissionDefinition("file:view", "查看文件", "文件管理");
         ensurePermissionDefinition("file:edit", "管理文件", "文件管理");
+        ensurePermissionDefinition("message:send", "群发消息", "站内消息");
     }
 
     /**
@@ -238,6 +241,22 @@ public class DataSeeder implements ApplicationRunner {
         log.info("补充消息中心菜单");
     }
 
+    /**
+     * 消息群发挂在「内容管理」目录下，作为管理员主动触达用户的入口。
+     */
+    private void ensureMessageSendMenu() {
+        long exists = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, "/message-send"));
+        if (exists > 0) {
+            return;
+        }
+        SysMenu group = menuMapper.selectOne(new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPath, "/content"));
+        Long parentId = group == null ? 0L : group.getId();
+        createMenu(parentId, "/message-send", "消息群发", "views/messageSend/index.vue", "Promotion", "message:send", 2);
+        log.info("补充消息群发菜单");
+    }
+
     private void ensureMenuStructure() {
         Integer columnCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.columns "
@@ -296,6 +315,7 @@ public class DataSeeder implements ApplicationRunner {
         titles.put("/content", "Content");
         titles.put("/notices", "Notices");
         titles.put("/messages", "Messages");
+        titles.put("/message-send", "Send Message");
         titles.forEach((path, titleEn) -> jdbcTemplate.update(
                 "UPDATE sys_menu SET title_en = ? WHERE path = ? AND (title_en IS NULL OR title_en = '')",
                 titleEn, path));

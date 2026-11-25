@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.BizException;
 import com.mgmt.common.I18n;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.message.dto.MessageSendRequest;
 import com.mgmt.module.message.entity.SysMessage;
 import com.mgmt.module.message.mapper.SysMessageMapper;
 import com.mgmt.module.role.entity.SysRolePermission;
@@ -143,12 +144,48 @@ public class MessageService {
     }
 
     /**
+     * 管理员群发：按全员 / 角色 / 指定用户解析接收人，只发给启用中的用户。
+     * 返回实际发送人数，方便前端提示。
+     */
+    public int send(MessageSendRequest request) {
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getStatus, 1)
+                .select(SysUser::getId);
+
+        String scope = request.getScope();
+        if ("all".equals(scope)) {
+            // 不加其它条件，即全员
+        } else if ("role".equals(scope)) {
+            if (request.getRoleIds() == null || request.getRoleIds().isEmpty()) {
+                throw new BizException(400, I18n.get("message.sendEmptyRecipients"));
+            }
+            wrapper.in(SysUser::getRoleId, request.getRoleIds());
+        } else if ("user".equals(scope)) {
+            if (request.getUserIds() == null || request.getUserIds().isEmpty()) {
+                throw new BizException(400, I18n.get("message.sendEmptyRecipients"));
+            }
+            wrapper.in(SysUser::getId, request.getUserIds());
+        } else {
+            throw new BizException(400, I18n.get("message.sendScopeInvalid"));
+        }
+
+        List<Long> userIds = userMapper.selectList(wrapper).stream()
+                .map(SysUser::getId)
+                .toList();
+        if (userIds.isEmpty()) {
+            throw new BizException(400, I18n.get("message.sendEmptyRecipients"));
+        }
+        return sendToUsers(userIds, TYPE_SYSTEM, request.getTitle(), request.getContent(), request.getLink());
+    }
+
+    /**
      * 逐人落库并推送。消息只是通知能力，单条失败不影响主业务。
      */
-    public void sendToUsers(Collection<Long> userIds, String type, String title, String content, String link) {
+    public int sendToUsers(Collection<Long> userIds, String type, String title, String content, String link) {
         if (userIds == null || userIds.isEmpty()) {
-            return;
+            return 0;
         }
+        int sent = 0;
         for (Long userId : new LinkedHashSet<>(userIds)) {
             try {
                 SysMessage message = new SysMessage();
@@ -165,10 +202,12 @@ public class MessageService {
                 payload.put("data", message);
                 payload.put("unreadCount", unreadCount(userId));
                 socketRegistry.send(userId, payload);
+                sent++;
             } catch (Exception e) {
                 log.warn("站内消息发送失败，用户 {}：{}", userId, e.getMessage());
             }
         }
+        return sent;
     }
 
     private String truncate(String value, int maxLength) {

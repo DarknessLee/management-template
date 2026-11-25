@@ -8,6 +8,14 @@ export function getMessagesApi(params) {
   })
 }
 
+export function sendMessageApi(data) {
+  return request({
+    url: '/messages/send',
+    method: 'post',
+    data
+  })
+}
+
 export function getUnreadMessageCountApi() {
   return request({
     url: '/messages/unread-count',
