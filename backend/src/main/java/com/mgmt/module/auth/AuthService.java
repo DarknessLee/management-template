@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final String FAIL_KEY_PREFIX = "mgmt:auth:login-fail:";
+    public static final String FAIL_KEY_PREFIX = "mgmt:auth:login-fail:";
     /** 剩余有效期不足该值时自动续期 */
     private static final long RENEW_BEFORE_SECONDS = 600;
 
@@ -56,6 +56,7 @@ public class AuthService {
     private final PasswordPolicyService passwordPolicyService;
     private final MessageService messageService;
     private final MessageSocketRegistry messageSocketRegistry;
+    private final LoginAuditService loginAuditService;
 
     @Value("${app.login.max-fail:5}")
     private int maxFail;
@@ -66,7 +67,12 @@ public class AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request, String ip) {
         // 先验验证码：拦掉脚本化的无限次尝试，再谈账号锁定
-        captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode());
+        try {
+            captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode());
+        } catch (BizException e) {
+            loginAuditService.recordFailure(request.getUsername(), null, e.getMessage());
+            throw e;
+        }
 
         Map<String, Object> security = settingService.security();
         boolean lockOnFail = boolValue(security, "lockOnFail", true);
@@ -75,32 +81,41 @@ public class AuthService {
         String failKey = FAIL_KEY_PREFIX + request.getUsername();
         int fails = currentFails(failKey);
         if (lockOnFail && fails >= maxFailure) {
-            throw new BizException(400, I18n.get("auth.tooManyFailures", remainingMinutes(failKey)));
+            String message = I18n.get("auth.tooManyFailures", remainingMinutes(failKey));
+            loginAuditService.recordFailure(request.getUsername(), null, message);
+            throw new BizException(400, message);
         }
 
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, request.getUsername()));
         // 用户不存在和密码错误返回同一提示，避免被枚举出有效用户名
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            Long userId = user == null ? null : user.getId();
             if (!lockOnFail) {
-                throw new BizException(400, I18n.get("auth.badCredentials"));
+                String message = I18n.get("auth.badCredentials");
+                loginAuditService.recordFailure(request.getUsername(), userId, message);
+                throw new BizException(400, message);
             }
             int remaining = recordFailure(failKey, fails, maxFailure);
-            if (remaining <= 0) {
-                throw new BizException(400, I18n.get("auth.tooManyFailures", failWindowMinutes));
-            }
-            throw new BizException(400, I18n.get("auth.badCredentialsRemaining", remaining));
+            String message = remaining <= 0
+                    ? I18n.get("auth.tooManyFailures", failWindowMinutes)
+                    : I18n.get("auth.badCredentialsRemaining", remaining);
+            loginAuditService.recordFailure(request.getUsername(), userId, message);
+            throw new BizException(400, message);
         }
         // 登录成功清空计数，避免历史失败影响下一次
         redisTemplate.delete(failKey);
         if (!Integer.valueOf(1).equals(user.getStatus())) {
-            throw new BizException(400, I18n.get("auth.accountDisabled"));
+            String message = I18n.get("auth.accountDisabled");
+            loginAuditService.recordFailure(request.getUsername(), user.getId(), message);
+            throw new BizException(400, message);
         }
 
         LoginLog log = new LoginLog();
         log.setUserId(user.getId());
         log.setUsername(user.getUsername());
         log.setLoginTime(LocalDateTime.now());
+        log.setSuccess(1);
         loginLogMapper.insert(log);
 
         String token = jwtUtil.generate(user.getId(), log.getId(), Boolean.TRUE.equals(request.getRememberMe()));

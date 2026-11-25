@@ -4,15 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.auth.dto.LoginSecurityVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
 import com.mgmt.module.role.DataScopeService;
+import com.mgmt.module.setting.SettingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -20,27 +28,75 @@ public class LoginLogService {
 
     private final LoginLogMapper loginLogMapper;
     private final DataScopeService dataScopeService;
+    private final StringRedisTemplate redisTemplate;
+    private final SettingService settingService;
 
-    public PageResult<LoginLog> page(long page, long size, String username,
+    public PageResult<LoginLog> page(long page, long size, String username, Integer success,
                                      LocalDateTime startTime, LocalDateTime endTime) {
         IPage<LoginLog> result = loginLogMapper.selectPage(new Page<>(page, size),
-                searchWrapper(username, startTime, endTime).orderByDesc(LoginLog::getLoginTime).orderByDesc(LoginLog::getId));
+                searchWrapper(username, success, startTime, endTime)
+                        .orderByDesc(LoginLog::getLoginTime)
+                        .orderByDesc(LoginLog::getId));
         return PageResult.of(result, result.getRecords());
     }
 
     /**
      * 导出与列表共用筛选条件和数据范围，避免导出越权数据。
      */
-    public List<LoginLog> listForExport(String username, LocalDateTime startTime, LocalDateTime endTime) {
-        return loginLogMapper.selectList(searchWrapper(username, startTime, endTime)
+    public List<LoginLog> listForExport(String username, Integer success,
+                                        LocalDateTime startTime, LocalDateTime endTime) {
+        return loginLogMapper.selectList(searchWrapper(username, success, startTime, endTime)
                 .orderByDesc(LoginLog::getLoginTime)
                 .orderByDesc(LoginLog::getId));
     }
 
-    private LambdaQueryWrapper<LoginLog> searchWrapper(String username,
+    /**
+     * 当前被临时锁定的账号：直接读取 Redis 失败计数，剩余时间即计数键的 TTL。
+     */
+    public LoginSecurityVO security() {
+        LoginSecurityVO vo = new LoginSecurityVO();
+        vo.setMaxFailCount(intValue(settingService.security().get("maxFailCount"), 5));
+
+        List<LoginSecurityVO.LockedAccount> accounts = new ArrayList<>();
+        try (Cursor<String> cursor = redisTemplate.scan(ScanOptions.scanOptions()
+                .match(AuthService.FAIL_KEY_PREFIX + "*")
+                .count(200)
+                .build())) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                int failures = intValue(redisTemplate.opsForValue().get(key), 0);
+                if (failures < vo.getMaxFailCount()) {
+                    continue;
+                }
+                Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+                LoginSecurityVO.LockedAccount account = new LoginSecurityVO.LockedAccount();
+                account.setUsername(key.substring(AuthService.FAIL_KEY_PREFIX.length()));
+                account.setFailures(failures);
+                account.setRemainingSeconds(ttl == null || ttl < 0 ? 0 : ttl);
+                accounts.add(account);
+            }
+        }
+        accounts.sort(Comparator.comparingLong(LoginSecurityVO.LockedAccount::getRemainingSeconds));
+        vo.setLockedAccounts(accounts);
+        return vo;
+    }
+
+    /**
+     * 解除指定账号的临时锁定，返回删除的计数键数量。
+     */
+    public long unlock(String username) {
+        if (!StringUtils.hasText(username)) {
+            return 0;
+        }
+        Boolean deleted = redisTemplate.delete(AuthService.FAIL_KEY_PREFIX + username);
+        return Boolean.TRUE.equals(deleted) ? 1 : 0;
+    }
+
+    private LambdaQueryWrapper<LoginLog> searchWrapper(String username, Integer success,
                                                        LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(username), LoginLog::getUsername, username)
+                .eq(success != null, LoginLog::getSuccess, success)
                 .ge(startTime != null, LoginLog::getLoginTime, startTime)
                 .le(endTime != null, LoginLog::getLoginTime, endTime);
 
@@ -54,6 +110,20 @@ public class LoginLogService {
             }
         }
         return wrapper;
+    }
+
+    private int intValue(Object value, int defaultValue) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     /**

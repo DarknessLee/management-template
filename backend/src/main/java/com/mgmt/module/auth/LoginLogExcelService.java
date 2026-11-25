@@ -33,31 +33,32 @@ public class LoginLogExcelService {
 
     private final LoginLogService loginLogService;
 
-    public byte[] export(String username, LocalDateTime startTime, LocalDateTime endTime) {
-        List<LoginLog> logs = loginLogService.listForExport(username, startTime, endTime);
+    public byte[] export(String username, Integer success, LocalDateTime startTime, LocalDateTime endTime) {
+        List<LoginLog> logs = loginLogService.listForExport(username, success, startTime, endTime);
         try (XSSFWorkbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("登录日志");
-            String[] headers = {"登录时间", "登录名", "用户ID", "退出时间", "在线时长(分钟)", "状态"};
+            String[] headers = {"登录时间", "登录名", "用户ID", "结果", "失败原因", "退出时间", "在线时长(分钟)", "会话状态"};
             writeHeader(workbook, sheet, headers);
 
             int rowIndex = 1;
             for (LoginLog log : logs) {
+                boolean failed = Integer.valueOf(0).equals(log.getSuccess());
                 Row row = sheet.createRow(rowIndex++);
                 row.createCell(0).setCellValue(log.getLoginTime() == null ? "" : log.getLoginTime().format(TIME_FORMATTER));
                 row.createCell(1).setCellValue(nullToEmpty(log.getUsername()));
                 row.createCell(2).setCellValue(log.getUserId() == null ? "" : String.valueOf(log.getUserId()));
-                row.createCell(3).setCellValue(log.getLogoutTime() == null ? "" : log.getLogoutTime().format(TIME_FORMATTER));
-                if (log.getLogoutTime() == null) {
-                    row.createCell(4).setCellValue("");
-                    row.createCell(5).setCellValue("在线");
+                row.createCell(3).setCellValue(failed ? "失败" : "成功");
+                row.createCell(4).setCellValue(failed ? nullToEmpty(log.getFailReason()) : "");
+                row.createCell(5).setCellValue(log.getLogoutTime() == null ? "" : log.getLogoutTime().format(TIME_FORMATTER));
+                if (failed || log.getLogoutTime() == null) {
+                    row.createCell(6).setCellValue("");
                 } else {
-                    long minutes = durationMinutes(log.getLoginTime(), log.getLogoutTime());
-                    row.createCell(4).setCellValue(minutes);
-                    row.createCell(5).setCellValue("已退出");
+                    row.createCell(6).setCellValue(durationMinutes(log.getLoginTime(), log.getLogoutTime()));
                 }
+                row.createCell(7).setCellValue(failed ? "" : (log.getLogoutTime() == null ? "在线" : "已退出"));
             }
-            setWidths(sheet, 20, 16, 10, 20, 16, 10);
+            setWidths(sheet, 20, 16, 10, 8, 30, 20, 16, 10);
 
             workbook.write(out);
             return out.toByteArray();

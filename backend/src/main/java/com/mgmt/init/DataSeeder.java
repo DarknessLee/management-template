@@ -67,6 +67,7 @@ public class DataSeeder implements ApplicationRunner {
         ensureRoleDataScope();
         ensureNoticePinned();
         ensurePasswordUpdateTime();
+        ensureLoginLogSecurityColumns();
         // 权限点目录先于角色初始化，角色授权的可选范围依赖它
         seedPermissions();
         seedDicts();
@@ -91,6 +92,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermission("admin", "monitor:cache");
         ensurePermission("admin", "online:view");
         ensurePermission("admin", "logs:clean");
+        ensurePermission("admin", "logs:unlock");
         ensurePermission("admin", "dept:view");
         ensurePermission("admin", "dept:edit");
         ensurePermission("admin", "job:view");
@@ -116,6 +118,7 @@ public class DataSeeder implements ApplicationRunner {
         ensurePermissionDefinition("settings:edit", "修改设置", "系统设置");
         ensurePermissionDefinition("logs:view", "查看日志", "操作日志");
         ensurePermissionDefinition("logs:clean", "清理日志", "操作日志");
+        ensurePermissionDefinition("logs:unlock", "解锁登录账号", "登录日志");
         ensurePermissionDefinition("notice:view", "查看公告", "通知公告");
         ensurePermissionDefinition("notice:edit", "管理公告", "通知公告");
         ensurePermissionDefinition("dict:view", "查看字典", "数据字典");
@@ -386,9 +389,42 @@ public class DataSeeder implements ApplicationRunner {
         log.info("用户表补充 password_update_time 字段");
     }
 
+    /**
+     * 登录安全中心需要记录失败尝试，老库补 success / fail_reason 字段，
+     * 同时允许 user_id 为空（用户名不存在时无法关联用户）。
+     */
+    private void ensureLoginLogSecurityColumns() {
+        ensureColumn("login_log", "success",
+                "ALTER TABLE login_log ADD COLUMN success TINYINT NOT NULL DEFAULT 1 "
+                        + "COMMENT '是否成功：1成功 0失败' AFTER logout_time");
+        ensureColumn("login_log", "fail_reason",
+                "ALTER TABLE login_log ADD COLUMN fail_reason VARCHAR(255) DEFAULT NULL "
+                        + "COMMENT '失败原因' AFTER success");
+        String nullable = jdbcTemplate.queryForObject(
+                "SELECT IS_NULLABLE FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'login_log' AND column_name = 'user_id'",
+                String.class);
+        if ("NO".equalsIgnoreCase(nullable)) {
+            jdbcTemplate.execute("ALTER TABLE login_log MODIFY COLUMN user_id BIGINT NULL "
+                    + "COMMENT '用户ID，登录失败且用户不存在时为空'");
+            log.info("登录日志表允许 user_id 为空");
+        }
+    }
+
+    private void ensureColumn(String table, String column, String ddl) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?",
+                Integer.class, table, column);
+        if (count != null && count > 0) {
+            return;
+        }
+        jdbcTemplate.execute(ddl);
+        log.info("{} 表补充 {} 字段", table, column);
+    }
+
     private SysMenu createMenu(Long parentId, String path, String title, String component, String icon,
-                               String permission, int sort) {
-        SysMenu menu = new SysMenu();
+                               String permission, int sort) {        SysMenu menu = new SysMenu();
         menu.setParentId(parentId);
         menu.setPath(path);
         menu.setTitle(title);

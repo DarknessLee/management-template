@@ -25,4 +25,10 @@ public class LoginLog {
     /** 为空表示仍在登录中或未正常退出 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime logoutTime;
+
+    /** 1 成功，0 失败 */
+    private Integer success;
+
+    /** 登录失败原因，成功时为空 */
+    private String failReason;
 }

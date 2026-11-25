@@ -2,6 +2,7 @@ package com.mgmt.module.auth;
 
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
+import com.mgmt.module.auth.dto.LoginSecurityVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.security.OperationLog;
 import com.mgmt.security.RequirePermission;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,9 +38,10 @@ public class LoginLogController {
     @OperationLog(module = "登录日志", action = "导出日志")
     public ResponseEntity<byte[]> export(
             @RequestParam(required = false) String username,
+            @RequestParam(required = false) Integer success,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        byte[] data = loginLogExcelService.export(username, startTime, endTime);
+        byte[] data = loginLogExcelService.export(username, success, startTime, endTime);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"login-logs-" + LocalDate.now() + ".xlsx\"")
@@ -53,8 +56,22 @@ public class LoginLogController {
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long size,
             @RequestParam(required = false) String username,
+            @RequestParam(required = false) Integer success,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        return Result.ok(loginLogService.page(page, size, username, startTime, endTime));
+        return Result.ok(loginLogService.page(page, size, username, success, startTime, endTime));
+    }
+
+    @GetMapping("/security")
+    @RequirePermission("logs:view")
+    public Result<LoginSecurityVO> security() {
+        return Result.ok(loginLogService.security());
+    }
+
+    @PostMapping("/unlock")
+    @RequirePermission("logs:unlock")
+    @OperationLog(module = "登录日志", action = "解锁账号")
+    public Result<Long> unlock(@RequestParam String username) {
+        return Result.ok(loginLogService.unlock(username));
     }
 }

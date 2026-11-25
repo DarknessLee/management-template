@@ -114,10 +114,12 @@ CREATE TABLE IF NOT EXISTS sys_setting (
 
 CREATE TABLE IF NOT EXISTS login_log (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
-    user_id     BIGINT      NOT NULL COMMENT '用户ID',
+    user_id     BIGINT      DEFAULT NULL COMMENT '用户ID，登录失败且用户不存在时为空',
     username    VARCHAR(50) NOT NULL COMMENT '登录名（冗余，便于审计）',
     login_time  DATETIME    NOT NULL COMMENT '登录时间',
     logout_time DATETIME    DEFAULT NULL COMMENT '退出时间',
+    success     TINYINT     NOT NULL DEFAULT 1 COMMENT '是否成功：1成功 0失败',
+    fail_reason VARCHAR(255) DEFAULT NULL COMMENT '失败原因',
     PRIMARY KEY (id),
     KEY idx_login_time (login_time),
     KEY idx_user_id (user_id)

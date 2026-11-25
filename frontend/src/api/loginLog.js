@@ -16,3 +16,18 @@ export function exportLoginLogsApi(params) {
     responseType: 'blob'
   })
 }
+
+export function getLoginSecurityApi() {
+  return request({
+    url: '/login-logs/security',
+    method: 'get'
+  })
+}
+
+export function unlockLoginAccountApi(username) {
+  return request({
+    url: '/login-logs/unlock',
+    method: 'post',
+    params: { username }
+  })
+}

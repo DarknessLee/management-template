@@ -6,6 +6,31 @@
       <el-button @click="exportLogs">{{ t('loginLogs.export') }}</el-button>
     </div>
 
+    <div class="card security-card">
+      <div class="security-header">
+        <div>
+          <h3 class="security-title">{{ t('loginLogs.securityTitle') }}</h3>
+          <p class="security-tip">{{ t('loginLogs.securityTip', { count: security.maxFailCount }) }}</p>
+        </div>
+        <el-button size="small" @click="loadSecurity">{{ t('common.refresh') }}</el-button>
+      </div>
+      <el-table v-if="security.lockedAccounts.length" :data="security.lockedAccounts" border stripe size="small">
+        <el-table-column prop="username" :label="t('loginLogs.columns.username')" min-width="140" />
+        <el-table-column prop="failures" :label="t('loginLogs.columns.failures')" width="110" />
+        <el-table-column :label="t('loginLogs.columns.remaining')" width="150">
+          <template #default="scope">{{ formatRemaining(scope.row.remainingSeconds) }}</template>
+        </el-table-column>
+        <el-table-column :label="t('loginLogs.columns.actions')" width="110">
+          <template #default="scope">
+            <el-button v-permission="'logs:unlock'" link type="primary" @click="unlock(scope.row)">
+              {{ t('loginLogs.unlock') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else :description="t('loginLogs.noLocked')" :image-size="56" />
+    </div>
+
     <div class="card">
       <div class="search-bar">
         <el-input
@@ -23,6 +48,15 @@
           value-format="YYYY-MM-DD HH:mm:ss"
           class="time-range"
         />
+        <el-select
+          v-model="searchForm.success"
+          clearable
+          :placeholder="t('loginLogs.resultPlaceholder')"
+          class="result-select"
+        >
+          <el-option :label="t('loginLogs.success')" :value="1" />
+          <el-option :label="t('loginLogs.failed')" :value="0" />
+        </el-select>
         <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
         <el-button @click="resetSearch">{{ t('common.reset') }}</el-button>
       </div>
@@ -30,10 +64,24 @@
       <el-table :data="logList" border stripe>
         <el-table-column prop="id" :label="t('loginLogs.columns.id')" width="80" />
         <el-table-column prop="username" :label="t('loginLogs.columns.username')" width="140" />
+        <el-table-column :label="t('loginLogs.columns.result')" width="90">
+          <template #default="scope">
+            <el-tag :type="scope.row.success === 0 ? 'danger' : 'success'" size="small">
+              {{ scope.row.success === 0 ? t('loginLogs.failed') : t('loginLogs.success') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="failReason"
+          :label="t('loginLogs.columns.failReason')"
+          min-width="180"
+          show-overflow-tooltip
+        />
         <el-table-column prop="loginTime" :label="t('loginLogs.columns.loginTime')" width="180" />
         <el-table-column :label="t('loginLogs.columns.logoutTime')" width="180">
           <template #default="scope">
             <span v-if="scope.row.logoutTime">{{ scope.row.logoutTime }}</span>
+            <span v-else-if="scope.row.success === 0">—</span>
             <span v-else class="online-text">{{ t('loginLogs.onlineNow') }}</span>
           </template>
         </el-table-column>
@@ -42,9 +90,10 @@
             {{ formatDuration(scope.row) }}
           </template>
         </el-table-column>
-        <el-table-column :label="t('loginLogs.columns.status')" width="100">
+        <el-table-column :label="t('loginLogs.columns.status')" width="110">
           <template #default="scope">
-            <el-tag :type="scope.row.logoutTime ? 'info' : 'success'" size="small">
+            <span v-if="scope.row.success === 0">—</span>
+            <el-tag v-else :type="scope.row.logoutTime ? 'info' : 'success'" size="small">
               {{ scope.row.logoutTime ? t('loginLogs.loggedOut') : t('loginLogs.online') }}
             </el-tag>
           </template>
@@ -68,12 +117,22 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getLoginLogsApi, exportLoginLogsApi } from '@/api/loginLog'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getLoginLogsApi,
+  exportLoginLogsApi,
+  getLoginSecurityApi,
+  unlockLoginAccountApi
+} from '@/api/loginLog'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
 const logList = ref([])
+const security = ref({
+  maxFailCount: 5,
+  lockedAccounts: []
+})
 const timeRange = ref([])
 const pagination = reactive({
   page: 1,
@@ -81,11 +140,13 @@ const pagination = reactive({
   total: 0
 })
 const searchForm = reactive({
-  username: ''
+  username: '',
+  success: null
 })
 
 onMounted(() => {
   loadLogs()
+  loadSecurity()
 })
 
 async function loadLogs() {
@@ -94,6 +155,7 @@ async function loadLogs() {
       page: pagination.page,
       size: pagination.size,
       username: searchForm.username || undefined,
+      success: searchForm.success ?? undefined,
       startTime: timeRange.value?.[0],
       endTime: timeRange.value?.[1]
     })
@@ -104,6 +166,46 @@ async function loadLogs() {
   }
 }
 
+async function loadSecurity() {
+  try {
+    const res = await getLoginSecurityApi()
+    security.value = res.data
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+async function unlock(row) {
+  try {
+    await ElMessageBox.confirm(
+      t('loginLogs.unlockConfirm', { name: row.username }),
+      t('loginLogs.unlock'),
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await unlockLoginAccountApi(row.username)
+    if (res.data > 0) {
+      ElMessage.success(t('loginLogs.unlocked'))
+    }
+    await loadSecurity()
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+function formatRemaining(seconds) {
+  if (!seconds || seconds <= 0) {
+    return t('loginLogs.expired')
+  }
+  if (seconds < 60) {
+    return t('loginLogs.remainingSeconds', { count: seconds })
+  }
+  return t('loginLogs.remainingMinutes', { count: Math.ceil(seconds / 60) })
+}
+
 function handleSearch() {
   pagination.page = 1
   loadLogs()
@@ -111,6 +213,7 @@ function handleSearch() {
 
 function resetSearch() {
   searchForm.username = ''
+  searchForm.success = null
   timeRange.value = []
   pagination.page = 1
   loadLogs()
@@ -131,6 +234,7 @@ async function exportLogs() {
   try {
     const response = await exportLoginLogsApi({
       username: searchForm.username || undefined,
+      success: searchForm.success ?? undefined,
       startTime: timeRange.value?.[0],
       endTime: timeRange.value?.[1]
     })
@@ -191,6 +295,35 @@ function formatDuration(row) {  if (!row.logoutTime) {
 
 .keyword-input {
   width: 220px;
+}
+
+.result-select {
+  width: 140px;
+}
+
+.security-card {
+  margin-bottom: 20px;
+}
+
+.security-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.security-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.security-tip {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
 }
 
 .time-range {
