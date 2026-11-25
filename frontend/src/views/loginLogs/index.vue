@@ -6,6 +6,32 @@
       <el-button @click="exportLogs">{{ t('loginLogs.export') }}</el-button>
     </div>
 
+    <div class="stat-grid">
+      <div class="stat-card">
+        <p class="stat-label">{{ t('loginLogs.stats.todaySuccess') }}</p>
+        <p class="stat-value is-success">{{ stats.todaySuccess }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('loginLogs.stats.todayFailed') }}</p>
+        <p class="stat-value is-danger">{{ stats.todayFailed }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">{{ t('loginLogs.stats.failureRate') }}</p>
+        <p class="stat-value">{{ stats.failureRate }}%</p>
+      </div>
+      <div class="stat-card reasons-card">
+        <p class="stat-label">{{ t('loginLogs.stats.topReasons') }}</p>
+        <ul v-if="stats.topFailReasons.length" class="reason-list">
+          <li v-for="(item, index) in stats.topFailReasons" :key="item.reason">
+            <span class="reason-rank">{{ index + 1 }}</span>
+            <span class="reason-text" :title="item.reason">{{ item.reason }}</span>
+            <span class="reason-count">{{ t('loginLogs.stats.times', { count: item.count }) }}</span>
+          </li>
+        </ul>
+        <p v-else class="reason-empty">{{ t('loginLogs.stats.noFailure') }}</p>
+      </div>
+    </div>
+
     <div class="card security-card">
       <div class="security-header">
         <div>
@@ -122,6 +148,7 @@ import {
   getLoginLogsApi,
   exportLoginLogsApi,
   getLoginSecurityApi,
+  getLoginLogStatsApi,
   unlockLoginAccountApi
 } from '@/api/loginLog'
 import { useI18n } from 'vue-i18n'
@@ -132,6 +159,13 @@ const logList = ref([])
 const security = ref({
   maxFailCount: 5,
   lockedAccounts: []
+})
+const stats = ref({
+  todayTotal: 0,
+  todaySuccess: 0,
+  todayFailed: 0,
+  failureRate: 0,
+  topFailReasons: []
 })
 const timeRange = ref([])
 const pagination = reactive({
@@ -147,6 +181,7 @@ const searchForm = reactive({
 onMounted(() => {
   loadLogs()
   loadSecurity()
+  loadStats()
 })
 
 async function loadLogs() {
@@ -170,6 +205,15 @@ async function loadSecurity() {
   try {
     const res = await getLoginSecurityApi()
     security.value = res.data
+  } catch (error) {
+    // 拦截器已提示
+  }
+}
+
+async function loadStats() {
+  try {
+    const res = await getLoginLogStatsApi()
+    stats.value = res.data
   } catch (error) {
     // 拦截器已提示
   }
@@ -303,6 +347,86 @@ function formatDuration(row) {  if (!row.logoutTime) {
 
 .security-card {
   margin-bottom: 20px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--app-bg-container);
+  border: 1px solid var(--app-border);
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+}
+
+.stat-value {
+  margin: 10px 0 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.stat-value.is-success {
+  color: #67c23a;
+}
+
+.stat-value.is-danger {
+  color: #f56c6c;
+}
+
+.reason-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reason-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--app-text-primary);
+}
+
+.reason-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  color: #fff;
+  background: #f56c6c;
+}
+
+.reason-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reason-count {
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.reason-empty {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--app-text-secondary);
 }
 
 .security-header {

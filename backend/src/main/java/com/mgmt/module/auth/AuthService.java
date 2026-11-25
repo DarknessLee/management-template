@@ -100,7 +100,8 @@ public class AuthService {
             String message = remaining <= 0
                     ? I18n.get("auth.tooManyFailures", failWindowMinutes)
                     : I18n.get("auth.badCredentialsRemaining", remaining);
-            loginAuditService.recordFailure(request.getUsername(), userId, message);
+            // 日志里记录稳定的失败原因，避免“剩余次数”差异导致统计被拆散
+            loginAuditService.recordFailure(request.getUsername(), userId, I18n.get("auth.badCredentials"));
             throw new BizException(400, message);
         }
         // 登录成功清空计数，避免历史失败影响下一次

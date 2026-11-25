@@ -1,9 +1,11 @@
 package com.mgmt.module.auth;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mgmt.common.PageResult;
+import com.mgmt.module.auth.dto.LoginLogStatsVO;
 import com.mgmt.module.auth.dto.LoginSecurityVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.module.auth.mapper.LoginLogMapper;
@@ -16,10 +18,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -90,6 +94,64 @@ public class LoginLogService {
         }
         Boolean deleted = redisTemplate.delete(AuthService.FAIL_KEY_PREFIX + username);
         return Boolean.TRUE.equals(deleted) ? 1 : 0;
+    }
+
+    /**
+     * 今日登录统计：成功/失败次数、失败率以及失败原因 Top3。
+     */
+    public LoginLogStatsVO stats() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        LoginLogStatsVO vo = new LoginLogStatsVO();
+        vo.setTodaySuccess(countWithScope(1, start, end));
+        vo.setTodayFailed(countWithScope(0, start, end));
+        vo.setTodayTotal(vo.getTodaySuccess() + vo.getTodayFailed());
+        if (vo.getTodayTotal() > 0) {
+            double rate = vo.getTodayFailed() * 100.0 / vo.getTodayTotal();
+            vo.setFailureRate(Math.round(rate * 10) / 10.0);
+        }
+
+        QueryWrapper<LoginLog> wrapper = rangeWrapper(0, start, end);
+        if (wrapper != null) {
+            wrapper.select("fail_reason AS reason", "COUNT(*) AS cnt")
+                    .isNotNull("fail_reason")
+                    .ne("fail_reason", "")
+                    .groupBy("fail_reason")
+                    .orderByDesc("cnt")
+                    .last("LIMIT 3");
+            vo.setTopFailReasons(loginLogMapper.selectMaps(wrapper).stream()
+                    .map(row -> new LoginLogStatsVO.FailReason(
+                            String.valueOf(row.get("reason")),
+                            ((Number) row.get("cnt")).longValue()))
+                    .toList());
+        }
+        return vo;
+    }
+
+    private long countWithScope(int success, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<LoginLog> wrapper = rangeWrapper(success, start, end);
+        return wrapper == null ? 0 : loginLogMapper.selectCount(wrapper);
+    }
+
+    /**
+     * 按成功标识和时间范围构造查询，并套用当前角色的数据范围；
+     * 返回 null 表示当前角色看不到任何数据。
+     */
+    private QueryWrapper<LoginLog> rangeWrapper(int success, LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<LoginLog> wrapper = new QueryWrapper<>();
+        wrapper.eq("success", success)
+                .ge("login_time", start)
+                .lt("login_time", end);
+        List<Long> visibleUserIds = dataScopeService.visibleUserIds();
+        if (visibleUserIds != null) {
+            if (visibleUserIds.isEmpty()) {
+                return null;
+            }
+            wrapper.in("user_id", visibleUserIds);
+        }
+        return wrapper;
     }
 
     private LambdaQueryWrapper<LoginLog> searchWrapper(String username, Integer success,

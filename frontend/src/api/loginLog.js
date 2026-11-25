@@ -24,6 +24,13 @@ export function getLoginSecurityApi() {
   })
 }
 
+export function getLoginLogStatsApi() {
+  return request({
+    url: '/login-logs/stats',
+    method: 'get'
+  })
+}
+
 export function unlockLoginAccountApi(username) {
   return request({
     url: '/login-logs/unlock',

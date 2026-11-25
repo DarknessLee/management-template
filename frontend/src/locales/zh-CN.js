@@ -759,6 +759,14 @@ export default {
     expired: '已到期',
     remainingSeconds: '{count} 秒',
     remainingMinutes: '{count} 分钟',
+    stats: {
+      todaySuccess: '今日成功',
+      todayFailed: '今日失败',
+      failureRate: '失败率',
+      topReasons: '失败原因 Top3',
+      noFailure: '今日暂无失败记录',
+      times: '{count} 次'
+    },
     success: '成功',
     failed: '失败',
     columns: {

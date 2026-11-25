@@ -2,6 +2,7 @@ package com.mgmt.module.auth;
 
 import com.mgmt.common.PageResult;
 import com.mgmt.common.Result;
+import com.mgmt.module.auth.dto.LoginLogStatsVO;
 import com.mgmt.module.auth.dto.LoginSecurityVO;
 import com.mgmt.module.auth.entity.LoginLog;
 import com.mgmt.security.OperationLog;
@@ -66,6 +67,12 @@ public class LoginLogController {
     @RequirePermission("logs:view")
     public Result<LoginSecurityVO> security() {
         return Result.ok(loginLogService.security());
+    }
+
+    @GetMapping("/stats")
+    @RequirePermission("logs:view")
+    public Result<LoginLogStatsVO> stats() {
+        return Result.ok(loginLogService.stats());
     }
 
     @PostMapping("/unlock")

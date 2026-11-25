@@ -759,6 +759,14 @@ export default {
     expired: 'Expired',
     remainingSeconds: '{count}s',
     remainingMinutes: '{count}m',
+    stats: {
+      todaySuccess: 'Success Today',
+      todayFailed: 'Failed Today',
+      failureRate: 'Failure Rate',
+      topReasons: 'Top 3 Failure Reasons',
+      noFailure: 'No failed attempts today',
+      times: '{count} times'
+    },
     success: 'Success',
     failed: 'Failed',
     columns: {
